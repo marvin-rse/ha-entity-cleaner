@@ -26,7 +26,8 @@ p { margin: 6px 0; }
 .top-bar { display:flex; justify-content:space-between; align-items:flex-start;
            gap:16px; margin-bottom:24px; flex-wrap:wrap; }
 .title-row { display:flex; align-items:center; gap:12px; }
-.logo { font-size: 26px; }
+.logo { display:inline-flex; align-items:center; }
+.logo svg { display:block; border-radius:8px; }
 .header-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .card { background:var(--card-background-color); border:1px solid var(--divider-color);
         border-radius:14px; padding:18px; margin-bottom:16px; }
@@ -167,6 +168,27 @@ p { margin: 6px 0; }
 .progress-fill { height:100%; background:var(--c-orphan); border-radius:20px; transition:width .3s; }
 .modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
 `;
+
+// Inline brand mark (matches assets/logo.svg — broom + sparkles on a blue tile).
+const LOGO_SVG = `
+<svg viewBox="0 0 420 420" width="34" height="34" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="hec-logo-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="55%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+  </defs>
+  <rect width="420" height="420" rx="96" fill="url(#hec-logo-bg)"/>
+  <g transform="translate(60,52) scale(13)">
+    <path fill="#ffffff" d="M19.36,2.72L20.78,4.14L15.06,9.85C16.13,11.39 16.28,13.24 15.38,14.44L9.06,8.12C10.26,7.22 12.11,7.37 13.65,8.44L19.36,2.72M5.93,17.57C3.92,15.56 2.69,13.16 2.35,10.92L7.23,8.83L14.67,16.27L12.58,21.15C10.34,20.81 7.94,19.58 5.93,17.57Z"/>
+  </g>
+  <g fill="#fde68a">
+    <path d="M115,87 C115,103 99,115 83,115 C99,115 115,127 115,143 C115,127 131,115 147,115 C131,115 115,103 115,87 Z"/>
+    <path d="M165,68 C165,77 156,84 147,84 C156,84 165,91 165,100 C165,91 174,84 183,84 C174,84 165,77 165,68 Z"/>
+    <path d="M92,162 C92,169 85,174 78,174 C85,174 92,179 92,186 C92,179 99,174 106,174 C99,174 92,169 92,162 Z"/>
+  </g>
+</svg>`;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -333,7 +355,7 @@ class HaEntityCleanerPanel extends HTMLElement {
   _renderHeader() {
     const wrap = el("div", { className: "top-bar" });
     const titleRow = el("div", { className: "title-row" },
-      el("span", { className: "logo" }, "🧹"),
+      (() => { const s = el("span", { className: "logo" }); s.innerHTML = LOGO_SVG; return s; })(),
       el("div", {},
         el("h1", {}, "HA Entity Cleaner"),
         el("p", { className: "sub" }, "Find, review, and safely remove orphaned entities"),
