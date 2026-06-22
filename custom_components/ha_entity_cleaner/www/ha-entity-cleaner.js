@@ -149,6 +149,13 @@ p { margin: 6px 0; }
   background:color-mix(in srgb,var(--c-offline) 10%,transparent);
   border:1px solid color-mix(in srgb,var(--c-offline) 40%,transparent);
   border-radius:8px; padding:10px 12px; font-size:12.5px; margin:10px 0; }
+.ref-list { margin-top:8px; display:flex; flex-direction:column; gap:7px;
+  max-height:150px; overflow:auto; }
+.ref-item { display:flex; flex-direction:column; gap:1px; padding-left:2px;
+  border-left:2px solid color-mix(in srgb,var(--c-offline) 55%,transparent); padding-left:8px; }
+.ref-eid { font-size:12px; color:var(--primary-text-color); word-break:break-all; }
+.ref-loc { font-size:11px; color:var(--secondary-text-color); word-break:break-all;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; }
 .cb-label { display:flex; gap:9px; align-items:flex-start; font-size:13px; margin:12px 0; cursor:pointer; }
 .field label { display:block; font-size:12px; color:var(--secondary-text-color); margin-bottom:5px; }
 .field input[type=text] { width:100%; background:var(--secondary-background-color);
@@ -664,9 +671,26 @@ class HaEntityCleanerPanel extends HTMLElement {
       modal.appendChild(list);
 
       if (refCount) {
-        modal.appendChild(el("div", { className: "modal-warn" },
-          `⚠ ${refCount} selected entit${refCount === 1 ? "y is" : "ies are"} still referenced in your config and will be skipped (skip_referenced=true).`,
-        ));
+        const refItems = items.filter(i => i.referenced);
+        const warn = el("div", { className: "modal-warn", style: { flexDirection: "column" } },
+          el("div", {},
+            `⚠ ${refCount} selected entit${refCount === 1 ? "y is" : "ies are"} still referenced in your config and will be skipped (skip_referenced=true):`,
+          ),
+        );
+        const refList = el("div", { className: "ref-list" });
+        for (const it of refItems) {
+          const locs = it.used_in || [];
+          const shown = locs.slice(0, 6);
+          const locText = locs.length
+            ? shown.join(", ") + (locs.length > 6 ? ` …+${locs.length - 6} more` : "")
+            : "location not recorded";
+          refList.appendChild(el("div", { className: "ref-item" },
+            el("span", { className: "ref-eid mono" }, it.entity_id),
+            el("span", { className: "ref-loc" }, "↳ " + locText),
+          ));
+        }
+        warn.appendChild(refList);
+        modal.appendChild(warn);
       }
 
       if (this._bucket === "offline") {
