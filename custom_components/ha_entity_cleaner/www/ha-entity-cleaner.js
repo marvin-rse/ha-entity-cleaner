@@ -725,11 +725,18 @@ class HaEntityCleanerPanel extends HTMLElement {
         ));
       }
 
+      // The delete button is toggled in place (no full re-render) so the
+      // confirm input keeps focus while you type — see updateConfirmState().
+      const deleteBtn = el("button", { className: "btn btn-danger", disabled: !confirmed, onclick: () => this._executeDelete() }, "Delete now");
+      const updateConfirmState = () => {
+        deleteBtn.disabled = !(this._backupAck && this._confirmText.trim().toUpperCase() === "DELETE");
+      };
+
       const cbLabel = el("label", { className: "cb-label" },
         el("input", { type: "checkbox", checked: this._backupAck }),
         " I have a current backup of my Home Assistant instance.",
       );
-      cbLabel.querySelector("input").addEventListener("change", e => { this._backupAck = e.target.checked; this._render(); });
+      cbLabel.querySelector("input").addEventListener("change", e => { this._backupAck = e.target.checked; updateConfirmState(); });
       modal.appendChild(cbLabel);
 
       const fieldWrap = el("div", { className: "field" },
@@ -737,13 +744,13 @@ class HaEntityCleanerPanel extends HTMLElement {
       );
       const confirmInput = el("input", { type: "text", placeholder: "DELETE", autocomplete: "off" });
       confirmInput.value = this._confirmText;
-      confirmInput.addEventListener("input", e => { this._confirmText = e.target.value; this._render(); });
+      confirmInput.addEventListener("input", e => { this._confirmText = e.target.value; updateConfirmState(); });
       fieldWrap.appendChild(confirmInput);
       modal.appendChild(fieldWrap);
 
       modal.appendChild(el("div", { className: "modal-actions" },
         el("button", { className: "btn btn-ghost", onclick: () => this._closeModal() }, "Cancel"),
-        el("button", { className: "btn btn-danger", disabled: !confirmed, onclick: () => this._executeDelete() }, "Delete now"),
+        deleteBtn,
       ));
 
     } else if (this._deleteStep === "running") {
