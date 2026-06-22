@@ -30,6 +30,9 @@ Home Assistant accumulates "zombie" entities — registry leftovers from removed
 | 🔍 **Config-usage check** | Flags entities still referenced in YAML or Lovelace dashboards before you can delete them |
 | 🗑 **Smart delete** | Dry-run by default · skip-referenced on · min-age filter · per-entity error reporting |
 | ⚠️ **Force-delete** | Optionally delete offline or disabled entities with explicit opt-in flags and safety warnings |
+| 🧩 **Devices & areas** | Find and remove orphaned devices (zero entities) and empty areas |
+| 🗄 **Recorder cleanup** | Detect and purge leftover long-term statistics for entities that no longer exist |
+| 🔗 **Open & inspect** | Click an entity to open its native more-info dialog; offline rows show last-seen |
 | 📋 **Export first** | Export your selection as JSON before any deletion |
 | ⚙️ **Ignore rules** | Exclude by entity_id wildcard, HA label, or file glob |
 | 🔒 **Admin-only** | Panel and all WS commands require admin access |
@@ -249,6 +252,25 @@ All commands require admin access (`@require_admin`).
 | `ha_entity_cleaner/scan` | Trigger immediate refresh |
 | `ha_entity_cleaner/list` | Returns `{buckets, summary}` with score |
 | `ha_entity_cleaner/delete` | Delete with guards: `entity_ids`, `include_uncertain`, `include_offline`, `include_disabled`, `min_age_days`, `skip_referenced`, `dry_run` |
+| `ha_entity_cleaner/extras` | Returns orphaned `devices` and empty `areas` with counts |
+| `ha_entity_cleaner/delete_devices` | Remove orphaned devices: `device_ids`, `dry_run` |
+| `ha_entity_cleaner/delete_areas` | Delete empty areas: `area_ids`, `dry_run` |
+| `ha_entity_cleaner/recorder` | Returns recorder statistics for entities that no longer exist |
+| `ha_entity_cleaner/purge_recorder` | Purge recorder data: `entity_ids`, `dry_run` (via `recorder.purge_entities`) |
+
+---
+
+## Beyond entities — devices, areas & recorder
+
+The panel also surfaces three other kinds of registry/database leftovers, each on its own triage tab:
+
+| Tab | What it finds | How it's removed |
+|-----|---------------|------------------|
+| **Devices** | Device-registry entries with **zero entities** (removed integrations, re-paired hardware) | `device_registry.async_remove_device` |
+| **Areas** | Areas with **no devices and no entities** | `area_registry.async_delete` |
+| **Recorder** | Long-term **statistics** whose entity no longer exists (recorder-source only) | Home Assistant's own `recorder.purge_entities` |
+
+> Each re-verifies its target at delete time (a device that regained an entity, an area no longer empty, a statistic no longer orphaned is skipped). Recorder purges are **irreversible** and gated behind a backup acknowledgement. Recorder detection requires the `recorder` integration; it degrades to empty if unavailable.
 
 ---
 

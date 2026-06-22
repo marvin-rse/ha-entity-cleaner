@@ -25,6 +25,23 @@ delete_orphans:
       default: false
       selector:
         boolean:
+    include_offline:
+      name: Include offline (force-delete)
+      description: >-
+        Also delete offline entities — devices whose integration is still
+        installed but currently unreachable. Off by default. Use with caution:
+        this may break automations or require re-pairing the device.
+      default: false
+      selector:
+        boolean:
+    include_disabled:
+      name: Include disabled (force-delete)
+      description: >-
+        Also delete entities that are disabled in the registry. Off by default.
+        Deletion is permanent and cannot be undone by re-enabling them.
+      default: false
+      selector:
+        boolean:
     skip_referenced:
       name: Skip referenced
       description: >-
