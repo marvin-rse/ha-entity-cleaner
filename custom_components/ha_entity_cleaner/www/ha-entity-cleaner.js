@@ -408,7 +408,7 @@ class HaEntityCleanerPanel extends HTMLElement {
     );
     const actions = el("div", { className: "header-actions" });
     if (this._view === "triage") {
-      actions.appendChild(el("button", { className: "btn btn-ghost", onclick: () => { this._view = "home"; this._render(); } }, "← Overview"));
+      actions.appendChild(el("button", { className: "btn btn-ghost", onclick: () => { this._view = "home"; this._selected.clear(); this._render(); } }, "← Overview"));
     }
     actions.appendChild(el("button", {
       className: "btn btn-ghost",
@@ -472,7 +472,7 @@ class HaEntityCleanerPanel extends HTMLElement {
           s.orphan_uncertain_count ? ` · ${s.orphan_uncertain_count} uncertain` : "",
           s.orphan_referenced_count ? ` · ${s.orphan_referenced_count} still referenced in config` : "",
         ),
-        el("button", { className: "btn btn-primary", style: { marginTop: "12px" }, onclick: () => { this._view = "triage"; this._render(); } }, "Review & Clean →"),
+        el("button", { className: "btn btn-primary", style: { marginTop: "12px" }, onclick: () => { this._view = "triage"; this._selected.clear(); this._render(); } }, "Review & Clean →"),
       ),
     );
     frag.appendChild(scoreCard);
@@ -497,7 +497,7 @@ class HaEntityCleanerPanel extends HTMLElement {
         el("div", { className: "counter-lbl" }, label),
         el("div", { className: "counter-sub" }, sub),
       );
-      if (cnt) card.addEventListener("click", () => { this._bucket = key; this._view = "triage"; this._render(); });
+      if (cnt) card.addEventListener("click", () => { this._bucket = key; this._view = "triage"; this._selected.clear(); this._render(); });
       counters.appendChild(card);
     }
     frag.appendChild(counters);

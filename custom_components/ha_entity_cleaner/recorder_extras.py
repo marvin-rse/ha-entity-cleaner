@@ -47,7 +47,12 @@ async def async_scan_recorder(hass: HomeAssistant) -> list[dict]:
         _LOGGER.debug("Recorder integration not available; skipping recorder scan")
         return []
 
-    instance = get_instance(hass)
+    try:
+        # get_instance raises (KeyError) when the recorder isn't initialised,
+        # rather than returning None — treat any failure as "no recorder".
+        instance = get_instance(hass)
+    except Exception:  # noqa: BLE001
+        instance = None
     if instance is None:
         return []
 
@@ -89,10 +94,16 @@ async def async_scan_recorder(hass: HomeAssistant) -> list[dict]:
 async def async_purge_recorder(
     hass: HomeAssistant, entity_ids: list[str], dry_run: bool
 ) -> dict:
-    """Purge recorder data for the given entity ids via recorder.purge_entities.
+    """Delete the orphaned long-term statistics for the given entity ids.
+
+    The leftovers we detect live in the statistics tables, so we remove them
+    with the recorder's ``clear_statistics`` (run in the recorder executor) —
+    ``recorder.purge_entities`` only removes *states*, not statistics. We also
+    fire ``recorder.purge_entities`` as a best-effort mop-up of any residual
+    states/events for the same ids.
 
     On dry_run, validates the targets against the current leftovers set and
-    reports what would be purged without calling the service.
+    reports what would be purged without changing anything.
     """
     # Re-scan so we only ever purge ids still confirmed as orphaned statistics.
     current = {i["entity_id"] for i in await async_scan_recorder(hass)}
@@ -103,19 +114,41 @@ async def async_purge_recorder(
     error: str | None = None
 
     if targets and not dry_run:
-        if not hass.services.has_service("recorder", "purge_entities"):
-            error = "recorder.purge_entities service is unavailable"
+        try:
+            from homeassistant.components.recorder import get_instance
+            from homeassistant.components.recorder.statistics import clear_statistics
+        except ImportError:
+            return {
+                "dry_run": dry_run,
+                "purged": [],
+                "purged_count": 0,
+                "skipped": entity_ids,
+                "error": "recorder integration is unavailable",
+            }
+
+        try:
+            instance = get_instance(hass)
+        except Exception:  # noqa: BLE001
+            instance = None
+
+        if instance is None:
+            error = "recorder is not running"
         else:
             try:
-                await hass.services.async_call(
-                    "recorder",
-                    "purge_entities",
-                    {"entity_id": targets},
-                    blocking=True,
-                )
+                # Primary: remove the long-term statistics for these ids.
+                await instance.async_add_executor_job(clear_statistics, instance, targets)
                 purged = targets
             except Exception as exc:  # noqa: BLE001
                 error = str(exc)
+
+            # Best-effort: also drop any residual states/events.
+            if purged and hass.services.has_service("recorder", "purge_entities"):
+                try:
+                    await hass.services.async_call(
+                        "recorder", "purge_entities", {"entity_id": targets}, blocking=True
+                    )
+                except Exception:  # noqa: BLE001
+                    _LOGGER.debug("purge_entities mop-up failed (non-fatal)", exc_info=True)
     elif targets:
         purged = targets  # dry run: would purge
 
