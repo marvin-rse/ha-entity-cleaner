@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from custom_components.ha_entity_cleaner.coordinator import classify, compute_score
+from custom_components.ha_entity_cleaner.coordinator import classify, compute_score, _scan_references
 
 
 def _make_entry(entity_id, config_entry_id=None, platform=None, disabled_by=None):
@@ -55,9 +55,8 @@ class TestClassifyOfflineDevice:
         reg = MagicMock()
         reg.entities = {entity_id: _make_entry(entity_id, config_entry_id=entry_id)}
 
-        with patch("custom_components.ha_entity_cleaner.coordinator.er.async_get", return_value=reg), \
-             patch("custom_components.ha_entity_cleaner.coordinator._scan_references", return_value={}):
-            buckets = classify(mock_hass)
+        with patch("custom_components.ha_entity_cleaner.coordinator.er.async_get", return_value=reg):
+            buckets = classify(mock_hass, ref_index={})
 
         assert entity_id not in [i["entity_id"] for i in buckets["orphan"]], \
             "Offline config-entry-backed device must NEVER appear as orphan"
@@ -74,9 +73,8 @@ class TestClassifyOfflineDevice:
         reg = MagicMock()
         reg.entities = {entity_id: _make_entry(entity_id, config_entry_id=entry_id)}
 
-        with patch("custom_components.ha_entity_cleaner.coordinator.er.async_get", return_value=reg), \
-             patch("custom_components.ha_entity_cleaner.coordinator._scan_references", return_value={}):
-            buckets = classify(mock_hass)
+        with patch("custom_components.ha_entity_cleaner.coordinator.er.async_get", return_value=reg):
+            buckets = classify(mock_hass, ref_index={})
 
         assert entity_id not in [i["entity_id"] for i in buckets["orphan"]]
         assert any(i["entity_id"] == entity_id for i in buckets["offline"])
@@ -93,9 +91,8 @@ class TestClassifyOfflineDevice:
         reg = MagicMock()
         reg.entities = {entity_id: _make_entry(entity_id, config_entry_id="gone_entry")}
 
-        with patch("custom_components.ha_entity_cleaner.coordinator.er.async_get", return_value=reg), \
-             patch("custom_components.ha_entity_cleaner.coordinator._scan_references", return_value={}):
-            buckets = classify(mock_hass)
+        with patch("custom_components.ha_entity_cleaner.coordinator.er.async_get", return_value=reg):
+            buckets = classify(mock_hass, ref_index={})
 
         orphans = {i["entity_id"]: i for i in buckets["orphan"]}
         assert entity_id in orphans
@@ -117,9 +114,8 @@ class TestReferenceScanGuard:
 
         ref_index = {entity_id: ["automations.yaml:42"]}
 
-        with patch("custom_components.ha_entity_cleaner.coordinator.er.async_get", return_value=reg), \
-             patch("custom_components.ha_entity_cleaner.coordinator._scan_references", return_value=ref_index):
-            buckets = classify(mock_hass)
+        with patch("custom_components.ha_entity_cleaner.coordinator.er.async_get", return_value=reg):
+            buckets = classify(mock_hass, ref_index=ref_index)
 
         item = next((i for i in buckets["orphan"] if i["entity_id"] == entity_id), None)
         assert item is not None
@@ -136,9 +132,8 @@ class TestReferenceScanGuard:
         reg = MagicMock()
         reg.entities = {entity_id: _make_entry(entity_id, config_entry_id="missing")}
 
-        with patch("custom_components.ha_entity_cleaner.coordinator.er.async_get", return_value=reg), \
-             patch("custom_components.ha_entity_cleaner.coordinator._scan_references", return_value={}):
-            buckets = classify(mock_hass)
+        with patch("custom_components.ha_entity_cleaner.coordinator.er.async_get", return_value=reg):
+            buckets = classify(mock_hass, ref_index={})
 
         item = next((i for i in buckets["orphan"] if i["entity_id"] == entity_id), None)
         assert item is not None
@@ -157,9 +152,8 @@ class TestIgnoreRules:
         reg = MagicMock()
         reg.entities = {entity_id: _make_entry(entity_id, config_entry_id="missing")}
 
-        with patch("custom_components.ha_entity_cleaner.coordinator.er.async_get", return_value=reg), \
-             patch("custom_components.ha_entity_cleaner.coordinator._scan_references", return_value={}):
-            buckets = classify(mock_hass, options={"ignore_entity_ids": ["sensor.legacy_*"]})
+        with patch("custom_components.ha_entity_cleaner.coordinator.er.async_get", return_value=reg):
+            buckets = classify(mock_hass, options={"ignore_entity_ids": ["sensor.legacy_*"]}, ref_index={})
 
         all_ids = [i["entity_id"] for bucket in buckets.values() for i in bucket]
         assert entity_id not in all_ids
@@ -179,13 +173,33 @@ class TestDeleteGuards:
         reg = MagicMock()
         reg.entities = {entity_id: _make_entry(entity_id, config_entry_id="missing")}
 
-        with patch("custom_components.ha_entity_cleaner.coordinator.er.async_get", return_value=reg), \
-             patch("custom_components.ha_entity_cleaner.coordinator._scan_references",
-                   return_value={entity_id: ["configuration.yaml:10"]}):
-            buckets = classify(mock_hass)
+        with patch("custom_components.ha_entity_cleaner.coordinator.er.async_get", return_value=reg):
+            buckets = classify(mock_hass, ref_index={entity_id: ["configuration.yaml:10"]})
 
         item = next((i for i in buckets["orphan"] if i["entity_id"] == entity_id), None)
         assert item["referenced"] is True  # guard: caller must check this before deleting
+
+
+class TestReferenceScan:
+    def test_large_file_is_skipped(self, tmp_path):
+        """Files over the size cap must not be read."""
+        big = tmp_path / "big.yaml"
+        big.write_bytes(b"x" * (6 * 1024 * 1024))  # 6 MB
+        result = _scan_references(tmp_path, [])
+        assert not result  # nothing indexed from oversized file
+
+    def test_yaml_entity_ids_are_indexed(self, tmp_path):
+        f = tmp_path / "automations.yaml"
+        f.write_text("entity_id: sensor.living_room_temp\n", encoding="utf-8")
+        result = _scan_references(tmp_path, [])
+        assert "sensor.living_room_temp" in result
+        assert any("automations.yaml:1" in loc for loc in result["sensor.living_room_temp"])
+
+    def test_ignored_file_is_skipped(self, tmp_path):
+        f = tmp_path / "legacy.yaml"
+        f.write_text("entity_id: sensor.old\n", encoding="utf-8")
+        result = _scan_references(tmp_path, ["legacy.yaml"])
+        assert "sensor.old" not in result
 
 
 class TestScoreComputation:

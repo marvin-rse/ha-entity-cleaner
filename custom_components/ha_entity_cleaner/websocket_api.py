@@ -20,7 +20,12 @@ from .const import (
     WS_LIST,
     WS_SCAN,
 )
-from .coordinator import EntityCleanerCoordinator, classify, compute_score
+from .coordinator import (
+    EntityCleanerCoordinator,
+    async_scan_and_classify,
+    classify,
+    compute_score,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -74,7 +79,7 @@ async def ws_list(
         options = dict(entry.options)
         break
 
-    buckets = await hass.async_add_executor_job(classify, hass, options)
+    buckets = await async_scan_and_classify(hass, options)
     score = compute_score(buckets)
 
     summary = {
@@ -100,7 +105,7 @@ async def ws_list(
 
 _DELETE_SCHEMA = {
     vol.Required("type"): WS_DELETE,
-    vol.Required("entity_ids"): [str],
+    vol.Required("entity_ids"): vol.All([str], vol.Length(max=500)),
     vol.Optional("include_uncertain", default=False): bool,
     vol.Optional("min_age_days", default=0): vol.All(int, vol.Range(min=0)),
     vol.Optional("skip_referenced", default=True): bool,
@@ -122,7 +127,7 @@ async def ws_delete(
         options = dict(entry.options)
         break
 
-    buckets = await hass.async_add_executor_job(classify, hass, options)
+    buckets = await async_scan_and_classify(hass, options)
 
     # Build a lookup: entity_id → item (orphan bucket only).
     orphan_map: dict[str, dict] = {i["entity_id"]: i for i in buckets[BUCKET_ORPHAN]}

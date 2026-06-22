@@ -15,6 +15,13 @@ scan of the YAML config tree and the .storage Lovelace JSON blobs.  Each
 entity_id that appears somewhere is flagged as `referenced: True` with a
 `used_in` list.  This is ADVISORY only — false positives and negatives are
 possible — so it never auto-selects or auto-expands the delete set.
+
+Threading model
+---------------
+`_scan_references` does file I/O — it MUST run in an executor (thread pool).
+`classify` accesses HA's in-memory state (entity registry, config entries,
+states) which is not thread-safe — it MUST run on the event loop.
+Always: executor(_scan_references) → event-loop(classify).
 """
 from __future__ import annotations
 
@@ -46,52 +53,66 @@ _LOGGER = logging.getLogger(__name__)
 
 SCAN_INTERVAL = timedelta(minutes=15)
 
-# Folders / filenames to skip in the reference scan.
+# Folders to skip while walking the config tree.
 _SKIP_DIRS = {".git", "__pycache__", "node_modules", ".storage"}
 _STORAGE_LOVELACE_RE = re.compile(r"lovelace", re.IGNORECASE)
 
 # Regex that matches a bare entity_id (domain.object_id) in a line.
 _ENTITY_RE = re.compile(r"\b([a-z_][a-z0-9_]*\.[a-z0-9_]+)\b")
 
+# Guard against reading huge files into memory (e.g. accidental backups).
+_MAX_FILE_BYTES = 5 * 1024 * 1024  # 5 MB
+
 
 # ---------------------------------------------------------------------------
-# Reference scan
+# Reference scan  (executor-safe — no HA state access)
 # ---------------------------------------------------------------------------
 
-def _scan_references(hass: HomeAssistant, ignore_files: list[str]) -> dict[str, list[str]]:
-    """Return a dict mapping entity_id -> list of "file:line" locations.
+def _scan_references(
+    config_dir: Path,
+    ignore_files: list[str],
+) -> dict[str, list[str]]:
+    """Return entity_id -> ["file:line", …] for every match found in config files.
+
+    Runs in a thread-pool executor. Takes a plain Path — never hass — so it
+    has zero contact with HA's non-thread-safe in-memory state.
 
     Scans:
-    - hass.config.config_dir (YAML tree, excluding .git/__pycache__)
-    - .storage/ Lovelace blobs (lovelace.* files)
-
-    Heuristic / line-based — may produce false positives.
+    - YAML files in config_dir (excluding .git / __pycache__ / node_modules)
+    - .storage/lovelace* JSON blobs
     """
-    config_dir = Path(hass.config.config_dir)
     storage_dir = config_dir / ".storage"
     index: dict[str, list[str]] = {}
 
-    def _should_skip_file(path: Path) -> bool:
-        rel = str(path.relative_to(config_dir))
+    def _should_skip(path: Path) -> bool:
+        try:
+            rel = str(path.relative_to(config_dir))
+        except ValueError:
+            return True  # outside config_dir — skip
         return any(fnmatch.fnmatch(rel, pat) for pat in ignore_files)
 
     def _scan_file(path: Path) -> None:
-        if _should_skip_file(path):
+        if _should_skip(path):
             return
         try:
+            if path.stat().st_size > _MAX_FILE_BYTES:
+                _LOGGER.debug("Skipping oversized file in reference scan: %s", path.name)
+                return
             text = path.read_text(encoding="utf-8", errors="replace")
         except OSError:
+            return
+        try:
+            rel = str(path.relative_to(config_dir))
+        except ValueError:
             return
         for lineno, line in enumerate(text.splitlines(), 1):
             for match in _ENTITY_RE.finditer(line):
                 eid = match.group(1)
-                loc = f"{path.relative_to(config_dir)}:{lineno}"
-                index.setdefault(eid, []).append(loc)
+                index.setdefault(eid, []).append(f"{rel}:{lineno}")
 
     # Walk YAML config tree.
     for root, dirs, files in os.walk(config_dir):
         root_path = Path(root)
-        # Prune hidden / well-known non-config dirs.
         dirs[:] = [d for d in dirs if d not in _SKIP_DIRS and not d.startswith(".")]
         for fname in files:
             if fname.endswith((".yaml", ".yml")):
@@ -107,7 +128,7 @@ def _scan_references(hass: HomeAssistant, ignore_files: list[str]) -> dict[str, 
 
 
 # ---------------------------------------------------------------------------
-# Classification
+# Classification  (event-loop only — accesses HA in-memory state)
 # ---------------------------------------------------------------------------
 
 def _item(
@@ -143,24 +164,24 @@ def _has_ignore_label(entry: er.RegistryEntry, ignore_labels: list[str]) -> bool
 def classify(
     hass: HomeAssistant,
     options: dict | None = None,
+    ref_index: dict[str, list[str]] | None = None,
 ) -> dict[str, list[dict]]:
     """Sort entities into orphan / offline / disabled / ghost buckets.
 
-    Each item carries a human reason, a `safe` flag (True only when deletion is
-    high-confidence), the entity's last_changed timestamp, and reference-scan
-    results (referenced flag + used_in locations).
+    Must be called from the HA event loop — it accesses the entity registry,
+    config entries, and state machine which are not thread-safe.
+
+    Pass a pre-computed `ref_index` (from _scan_references run in an executor)
+    to include config-usage annotations.  If None, reference data is omitted
+    and a debug warning is logged.
     """
+    if ref_index is None:
+        _LOGGER.debug("classify() called without ref_index; config-usage check skipped")
+        ref_index = {}
+
     options = options or {}
     ignore_entity_ids: list[str] = options.get(CONF_IGNORE_ENTITY_IDS, [])
     ignore_labels: list[str] = options.get(CONF_IGNORE_LABELS, [])
-    ignore_files: list[str] = options.get(CONF_IGNORE_FILES, [])
-
-    # Reference scan runs first so we can annotate every item.
-    try:
-        ref_index = _scan_references(hass, ignore_files)
-    except Exception:  # noqa: BLE001
-        _LOGGER.warning("Reference scan failed; skipping usage checks", exc_info=True)
-        ref_index = {}
 
     registry = er.async_get(hass)
     entries = {e.entry_id: e for e in hass.config_entries.async_entries()}
@@ -290,6 +311,33 @@ def compute_score(buckets: dict[str, list[dict]]) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Helpers for callers that need the combined scan + classify
+# ---------------------------------------------------------------------------
+
+async def async_scan_and_classify(
+    hass: HomeAssistant,
+    options: dict | None = None,
+) -> dict[str, list[dict]]:
+    """Run reference scan in executor then classify on the event loop.
+
+    This is the correct way to get a full picture including config-usage data.
+    """
+    options = options or {}
+    config_dir = Path(hass.config.config_dir)
+    ignore_files: list[str] = options.get(CONF_IGNORE_FILES, [])
+
+    try:
+        ref_index: dict[str, list[str]] = await hass.async_add_executor_job(
+            _scan_references, config_dir, ignore_files
+        )
+    except Exception:  # noqa: BLE001
+        _LOGGER.warning("Reference scan failed; skipping config-usage check", exc_info=True)
+        ref_index = {}
+
+    return classify(hass, options, ref_index)
+
+
+# ---------------------------------------------------------------------------
 # Coordinator
 # ---------------------------------------------------------------------------
 
@@ -301,6 +349,4 @@ class EntityCleanerCoordinator(DataUpdateCoordinator[dict[str, list[dict]]]):
         self.options = options
 
     async def _async_update_data(self) -> dict[str, list[dict]]:
-        return await self.hass.async_add_executor_job(
-            classify, self.hass, self.options
-        )
+        return await async_scan_and_classify(self.hass, self.options)

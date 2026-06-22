@@ -12,7 +12,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, SERVICE_DELETE_ORPHANS, SERVICE_SCAN
-from .coordinator import EntityCleanerCoordinator, classify
+from .coordinator import EntityCleanerCoordinator, async_scan_and_classify
 from .panel import async_register_panel, async_unregister_panel
 from .websocket_api import async_register_websocket_api
 
@@ -82,7 +82,7 @@ def _register_services(hass: HomeAssistant) -> None:
             options = dict(entry.options)
             break
 
-        buckets = classify(hass, options)
+        buckets = await async_scan_and_classify(hass, options)
 
         domains = call.data.get("domains")
         explicit = call.data.get("entity_ids")

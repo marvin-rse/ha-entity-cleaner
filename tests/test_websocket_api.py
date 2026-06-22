@@ -18,7 +18,7 @@ async def test_ws_list_returns_buckets_and_score(hass, hass_ws_client, config_en
     }
 
     with patch("custom_components.ha_entity_cleaner.async_setup_entry", return_value=True), \
-         patch("custom_components.ha_entity_cleaner.websocket_api.classify", return_value=fake_buckets):
+         patch("custom_components.ha_entity_cleaner.websocket_api.async_scan_and_classify", return_value=fake_buckets):
         await hass.config_entries.async_setup(config_entry.entry_id)
         client = await hass_ws_client(hass)
         await client.send_json({"id": 1, "type": "ha_entity_cleaner/list"})
@@ -42,7 +42,7 @@ async def test_ws_delete_dry_run_returns_matched(hass, hass_ws_client, config_en
     }
 
     with patch("custom_components.ha_entity_cleaner.async_setup_entry", return_value=True), \
-         patch("custom_components.ha_entity_cleaner.websocket_api.classify", return_value=fake_buckets):
+         patch("custom_components.ha_entity_cleaner.websocket_api.async_scan_and_classify", return_value=fake_buckets):
         await hass.config_entries.async_setup(config_entry.entry_id)
         client = await hass_ws_client(hass)
         await client.send_json({
@@ -73,7 +73,7 @@ async def test_ws_delete_skips_referenced(hass, hass_ws_client, config_entry):
     }
 
     with patch("custom_components.ha_entity_cleaner.async_setup_entry", return_value=True), \
-         patch("custom_components.ha_entity_cleaner.websocket_api.classify", return_value=fake_buckets):
+         patch("custom_components.ha_entity_cleaner.websocket_api.async_scan_and_classify", return_value=fake_buckets):
         await hass.config_entries.async_setup(config_entry.entry_id)
         client = await hass_ws_client(hass)
         await client.send_json({
@@ -103,7 +103,7 @@ async def test_ws_delete_refuses_non_orphans(hass, hass_ws_client, config_entry)
     }
 
     with patch("custom_components.ha_entity_cleaner.async_setup_entry", return_value=True), \
-         patch("custom_components.ha_entity_cleaner.websocket_api.classify", return_value=fake_buckets):
+         patch("custom_components.ha_entity_cleaner.websocket_api.async_scan_and_classify", return_value=fake_buckets):
         await hass.config_entries.async_setup(config_entry.entry_id)
         client = await hass_ws_client(hass)
         await client.send_json({
