@@ -1,27 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" width="1200" height="340">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0d1117"/>
-      <stop offset="60%" style="stop-color:#111827"/>
-      <stop offset="100%" style="stop-color:#0f2235"/>
+      <stop offset="0%" stop-color="#0c1424"/>
+      <stop offset="100%" stop-color="#0a1018"/>
     </linearGradient>
-    <linearGradient id="accent-bar" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#f0556d"/>
-      <stop offset="33%" style="stop-color:#e3a93c"/>
-      <stop offset="66%" style="stop-color:#3fb950"/>
-      <stop offset="100%" style="stop-color:#38bdf8"/>
-    </linearGradient>
-    <linearGradient id="ring-fill" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#38bdf8"/>
-      <stop offset="100%" style="stop-color:#0ea5e9"/>
-    </linearGradient>
-    <filter id="glow-filter">
-      <feGaussianBlur stdDeviation="8" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-    <filter id="card-shadow">
-      <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#000" flood-opacity="0.4"/>
-    </filter>
+    <radialGradient id="glow" cx="14%" cy="50%" r="46%">
+      <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/>
+    </radialGradient>
     <!-- App-icon tile gradients -->
     <linearGradient id="tile-bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#38bdf8"/>
@@ -32,40 +18,35 @@
       <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22"/>
       <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="tile-broom" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#dbeafe"/>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
     </linearGradient>
     <filter id="tile-shadow" x="-40%" y="-40%" width="180%" height="180%">
-      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#0b1020" flood-opacity="0.45"/>
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.45"/>
     </filter>
   </defs>
 
   <!-- Background -->
   <rect width="1200" height="340" fill="url(#bg)"/>
+  <rect width="1200" height="340" fill="url(#glow)"/>
 
-  <!-- Subtle grid lines -->
-  <g stroke="#1e293b" stroke-width="0.5" opacity="0.4">
-    <line x1="0" y1="85" x2="1200" y2="85"/>
-    <line x1="0" y1="170" x2="1200" y2="170"/>
-    <line x1="0" y1="255" x2="1200" y2="255"/>
-    <line x1="200" y1="0" x2="200" y2="340"/>
-    <line x1="400" y1="0" x2="400" y2="340"/>
-    <line x1="600" y1="0" x2="600" y2="340"/>
-    <line x1="800" y1="0" x2="800" y2="340"/>
-    <line x1="1000" y1="0" x2="1000" y2="340"/>
+  <!-- Decorative oversized sparkles on the right (subtle brand motif) -->
+  <g fill="#fbbf24" opacity="0.10">
+    <path d="M1040,70 C1040,118 1006,152 958,152 C1006,152 1040,186 1040,234 C1040,186 1074,152 1122,152 C1074,152 1040,118 1040,70 Z"/>
+  </g>
+  <g fill="#38bdf8" opacity="0.10">
+    <path d="M1140,180 C1140,210 1119,231 1089,231 C1119,231 1140,252 1140,282 C1140,252 1161,231 1191,231 C1161,231 1140,210 1140,180 Z"/>
   </g>
 
-  <!-- Left: App-icon tile (the actual logo, scaled from 420×420) -->
-  <!-- maps logo center (210,210) → (160,170) at scale 0.452 -->
-  <g transform="translate(65.1,75.1) scale(0.452)" filter="url(#tile-shadow)">
+  <!-- Left: app-icon tile (logo, scaled from 420×420) -->
+  <!-- maps logo center (210,210) → (140,170) at scale 0.40 -->
+  <g transform="translate(56,86) scale(0.40)" filter="url(#tile-shadow)">
     <rect width="420" height="420" rx="94" fill="url(#tile-bg)"/>
     <rect width="420" height="420" rx="94" fill="url(#tile-hl)"/>
-    <!-- Broom (mdi:broom) -->
     <g transform="translate(60,52) scale(13)">
-      <path fill="url(#tile-broom)" d="M19.36,2.72L20.78,4.14L15.06,9.85C16.13,11.39 16.28,13.24 15.38,14.44L9.06,8.12C10.26,7.22 12.11,7.37 13.65,8.44L19.36,2.72M5.93,17.57C3.92,15.56 2.69,13.16 2.35,10.92L7.23,8.83L14.67,16.27L12.58,21.15C10.34,20.81 7.94,19.58 5.93,17.57Z"/>
+      <path fill="#ffffff" d="M19.36,2.72L20.78,4.14L15.06,9.85C16.13,11.39 16.28,13.24 15.38,14.44L9.06,8.12C10.26,7.22 12.11,7.37 13.65,8.44L19.36,2.72M5.93,17.57C3.92,15.56 2.69,13.16 2.35,10.92L7.23,8.83L14.67,16.27L12.58,21.15C10.34,20.81 7.94,19.58 5.93,17.57Z"/>
     </g>
-    <!-- Sparkles -->
     <g fill="#fde68a">
       <path d="M115,87 C115,103 99,115 83,115 C99,115 115,127 115,143 C115,127 131,115 147,115 C131,115 115,103 115,87 Z"/>
       <path d="M165,68 C165,77 156,84 147,84 C156,84 165,91 165,100 C165,91 174,84 183,84 C174,84 165,77 165,68 Z"/>
@@ -73,56 +54,41 @@
     </g>
   </g>
 
-  <!-- Center: Title block -->
-  <text x="300" y="125" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="52" font-weight="800" fill="#f1f5f9" letter-spacing="-1.5">HA Entity Cleaner</text>
-  <text x="302" y="165" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="20" fill="#64748b" letter-spacing="0.2">Find, review, and safely bulk-delete orphaned entities</text>
+  <!-- Wordmark + tagline -->
+  <text x="270" y="158" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif"
+        font-size="52" font-weight="800" fill="#f8fafc" letter-spacing="-1.5">HA Entity Cleaner</text>
+  <text x="272" y="192" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif"
+        font-size="19" fill="#8193ad" letter-spacing="0.2">Find, review, and safely bulk-delete orphaned entities</text>
 
-  <!-- Feature pills row -->
-  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="13" font-weight="500">
-    <!-- Sidebar panel pill -->
-    <rect x="300" y="195" width="138" height="30" rx="15" fill="#1e3a5f" stroke="#38bdf8" stroke-width="1.5" opacity="0.9"/>
-    <text x="369" y="215" text-anchor="middle" fill="#38bdf8">⬛ Sidebar Panel</text>
-
-    <!-- Smart delete pill -->
-    <rect x="452" y="195" width="132" height="30" rx="15" fill="#2d1f1f" stroke="#f0556d" stroke-width="1.5" opacity="0.9"/>
-    <text x="518" y="215" text-anchor="middle" fill="#f0556d">🗑 Smart Delete</text>
-
-    <!-- Config scan pill -->
-    <rect x="598" y="195" width="148" height="30" rx="15" fill="#2d2a1a" stroke="#e3a93c" stroke-width="1.5" opacity="0.9"/>
-    <text x="672" y="215" text-anchor="middle" fill="#e3a93c">⚠ Config Scan</text>
-
-    <!-- HACS pill -->
-    <rect x="760" y="195" width="90" height="30" rx="15" fill="#1a2d1a" stroke="#3fb950" stroke-width="1.5" opacity="0.9"/>
-    <text x="805" y="215" text-anchor="middle" fill="#3fb950">✓ HACS</text>
-
-    <!-- Admin only pill -->
-    <rect x="864" y="195" width="106" height="30" rx="15" fill="#1e1e2d" stroke="#a78bfa" stroke-width="1.5" opacity="0.9"/>
-    <text x="917" y="215" text-anchor="middle" fill="#a78bfa">🔒 Admin Only</text>
+  <!-- Uniform minimal feature chips (no emoji) -->
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif"
+     font-size="13.5" font-weight="600" fill="#bae6fd">
+    <g>
+      <rect x="272" y="222" width="126" height="32" rx="16" fill="#ffffff" fill-opacity="0.04"
+            stroke="#38bdf8" stroke-opacity="0.30" stroke-width="1"/>
+      <circle cx="292" cy="238" r="3" fill="#38bdf8"/>
+      <text x="305" y="242.5">Sidebar panel</text>
+    </g>
+    <g>
+      <rect x="410" y="222" width="120" height="32" rx="16" fill="#ffffff" fill-opacity="0.04"
+            stroke="#38bdf8" stroke-opacity="0.30" stroke-width="1"/>
+      <circle cx="430" cy="238" r="3" fill="#38bdf8"/>
+      <text x="443" y="242.5">Smart delete</text>
+    </g>
+    <g>
+      <rect x="542" y="222" width="118" height="32" rx="16" fill="#ffffff" fill-opacity="0.04"
+            stroke="#38bdf8" stroke-opacity="0.30" stroke-width="1"/>
+      <circle cx="562" cy="238" r="3" fill="#38bdf8"/>
+      <text x="575" y="242.5">Config scan</text>
+    </g>
+    <g>
+      <rect x="672" y="222" width="116" height="32" rx="16" fill="#ffffff" fill-opacity="0.04"
+            stroke="#38bdf8" stroke-opacity="0.30" stroke-width="1"/>
+      <circle cx="692" cy="238" r="3" fill="#38bdf8"/>
+      <text x="705" y="242.5">Admin-only</text>
+    </g>
   </g>
 
-  <!-- Right: Cleanliness score ring preview -->
-  <g transform="translate(1040, 170)">
-    <!-- Ring background -->
-    <circle cx="0" cy="0" r="68" fill="#111827" stroke="#1e293b" stroke-width="1"/>
-    <!-- Ring track -->
-    <circle cx="0" cy="0" r="52" fill="none" stroke="#1e293b" stroke-width="10" transform="rotate(-90)"/>
-    <!-- Ring fill 74% = 264 * 0.74 = 195 -->
-    <circle cx="0" cy="0" r="52" fill="none" stroke="#38bdf8" stroke-width="10" stroke-linecap="round"
-      stroke-dasharray="195 264" transform="rotate(-90)" filter="url(#glow-filter)"/>
-    <text x="0" y="-8" text-anchor="middle" font-family="ui-monospace, monospace" font-size="28" font-weight="700" fill="#38bdf8">74</text>
-    <text x="0" y="14" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" fill="#64748b">Fair</text>
-    <text x="0" y="90" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="12" fill="#94a3b8">Cleanliness Score</text>
-  </g>
-
-  <!-- Bottom accent bar -->
-  <rect x="0" y="332" width="1200" height="4" fill="url(#accent-bar)" opacity="0.85"/>
-
-  <!-- Bottom badges -->
-  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="12" fill="#475569">
-    <text x="300" y="320">⭐ Cleanliness score 0–100</text>
-    <text x="500" y="320">🛡 Safe-delete guards</text>
-    <text x="670" y="320">📋 Export before delete</text>
-    <text x="840" y="320">🔍 Config-usage check</text>
-    <text x="1010" y="320">🚫 No telemetry</text>
-  </g>
+  <!-- Thin brand accent line -->
+  <rect x="0" y="337" width="1200" height="3" fill="url(#accent)"/>
 </svg>
