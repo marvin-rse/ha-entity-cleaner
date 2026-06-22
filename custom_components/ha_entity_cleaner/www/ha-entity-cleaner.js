@@ -170,6 +170,12 @@ p { margin: 6px 0; }
                 overflow:hidden; margin:16px 0 8px; }
 .progress-fill { height:100%; background:var(--c-orphan); border-radius:20px; transition:width .3s; }
 .modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
+
+/* footer */
+.footer { margin-top:32px; padding-top:14px; border-top:1px solid var(--divider-color);
+  text-align:center; font-size:12px; color:var(--secondary-text-color); }
+.footer-link { color:var(--secondary-text-color); text-decoration:none; }
+.footer-link:hover { color:var(--primary-color); text-decoration:underline; }
 `;
 
 // Inline brand mark (matches assets/logo.svg — broom + sparkles on a blue tile).
@@ -281,6 +287,7 @@ class HaEntityCleanerPanel extends HTMLElement {
     this._deleteProgress = 0;
     this._extras = null;       // { devices, areas, summary }
     this._recorder = null;     // { recorder, summary }
+    this._version = "";
   }
 
   _isExtraBucket(b) { return EXTRA_BUCKETS.includes(b ?? this._bucket); }
@@ -289,6 +296,12 @@ class HaEntityCleanerPanel extends HTMLElement {
     const first = !this._hass;
     this._hass = h;
     if (first) this._loadData();
+  }
+
+  // HA sets `panel` on the custom-panel element — its config carries our version.
+  set panel(p) {
+    const v = p?.config?.version;
+    if (v && v !== this._version) { this._version = v; this._render(); }
   }
 
   connectedCallback() {
@@ -394,7 +407,17 @@ class HaEntityCleanerPanel extends HTMLElement {
       page.appendChild(this._isExtraBucket() ? this._renderExtrasModal() : this._renderModal());
     }
 
+    page.appendChild(this._renderFooter());
     root.appendChild(page);
+  }
+
+  _renderFooter() {
+    const footer = el("div", { className: "footer" });
+    footer.appendChild(el("span", {}, `HA Entity Cleaner${this._version ? ` · v${this._version}` : ""}`));
+    footer.appendChild(el("span", {}, " · "));
+    const link = el("a", { className: "footer-link", href: "https://github.com/marvin-rse/ha-entity-cleaner", target: "_blank", rel: "noopener" }, "GitHub");
+    footer.appendChild(link);
+    return footer;
   }
 
   _renderHeader() {
