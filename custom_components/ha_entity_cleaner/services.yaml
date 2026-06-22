@@ -1,0 +1,60 @@
+scan:
+  name: Scan
+  description: Re-scan the entity registry and refresh the cleanliness counters immediately.
+
+delete_orphans:
+  name: Delete orphaned entities
+  description: >-
+    Delete orphaned (zombie) entities from the registry. Runs as a dry run by
+    default and returns a response describing what would be removed.
+    Only entities whose integration is gone are eligible; real-but-offline
+    devices are never touched.
+  fields:
+    dry_run:
+      name: Dry run
+      description: >-
+        If true (default), nothing is deleted — only what would be removed is reported.
+      default: true
+      selector:
+        boolean:
+    include_uncertain:
+      name: Include uncertain
+      description: >-
+        Also target orphans that have no config entry but whose source is unclear.
+        Off by default — only high-confidence orphans (config entry gone) are eligible.
+      default: false
+      selector:
+        boolean:
+    skip_referenced:
+      name: Skip referenced
+      description: >-
+        Skip entities that are still referenced in YAML config or Lovelace dashboards.
+        On by default — a strong keep signal.
+      default: true
+      selector:
+        boolean:
+    min_age_days:
+      name: Minimum age (days)
+      description: >-
+        Skip entities whose last_changed is more recent than this many days.
+        0 (default) disables the guard.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 3650
+          mode: box
+    domains:
+      name: Domains
+      description: Restrict deletion to these entity domains (e.g. button, sensor).
+      example: '["button", "binary_sensor"]'
+      selector:
+        text:
+          multiple: true
+    entity_ids:
+      name: Entity IDs
+      description: Restrict deletion to these specific entity IDs.
+      example: '["sensor.old_device_temperature"]'
+      selector:
+        text:
+          multiple: true

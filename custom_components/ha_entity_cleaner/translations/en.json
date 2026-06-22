@@ -1,0 +1,26 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HA Entity Cleaner",
+        "description": "Adds a sidebar panel and sensor to find and safely remove orphaned entities. No configuration required — click Submit to install."
+      }
+    },
+    "abort": {
+      "already_configured": "HA Entity Cleaner is already set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ignore rules",
+        "description": "Entities matching any of these rules are excluded from classification entirely.",
+        "data": {
+          "ignore_entity_ids": "Ignore entity IDs (comma-separated, wildcards OK)",
+          "ignore_labels": "Ignore labels (comma-separated)",
+          "ignore_files": "Ignore files in reference scan (comma-separated glob patterns)"
+        }
+      }
+    }
+  }
+}
