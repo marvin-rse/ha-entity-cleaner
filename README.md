@@ -41,7 +41,7 @@ Home Assistant accumulates "zombie" entities — registry leftovers from removed
 
 ### Overview — cleanliness score & counters
 
-<img src="assets/screenshot-home.svg" alt="HA Entity Cleaner — Home view with cleanliness score and counters" width="100%"/>
+<img src="assets/screenshot-home.png" alt="HA Entity Cleaner — Home view with cleanliness score and counters" width="100%"/>
 
 The home screen shows your instance's **cleanliness score** (0–100), a breakdown of entity counts by bucket, and a per-domain bar chart of orphans.
 
@@ -49,27 +49,29 @@ The home screen shows your instance's **cleanliness score** (0–100), a breakdo
 
 ### Triage — review orphans grouped by domain
 
-<img src="assets/screenshot-triage.svg" alt="HA Entity Cleaner — Triage view with orphan list" width="100%"/>
+<img src="assets/screenshot-triage.png" alt="HA Entity Cleaner — Triage view with entities grouped by domain" width="100%"/>
 
-Switch to triage mode to review orphans grouped by domain. Each row shows:
+Switch to triage mode to review entities grouped by domain across four tabs — **Orphans**, **Offline**, **Disabled**, and **Ghosts**. Each row shows:
 - ✅ Checkbox for selection (pre-checked for safe orphans, never for referenced ones)
-- The entity_id and the reason it was classified as an orphan
+- The entity_id and the reason it was classified
 - Green = high-confidence (config entry removed), amber = uncertain (review before deleting)
 - **⚠ in config** badge for entities still found in your YAML or Lovelace dashboards
 - Last activity age
+
+Offline and disabled entities can be force-deleted from their tabs, with a prominent warning banner.
 
 ---
 
 ### Delete confirmation — multi-step safe-delete flow
 
-<img src="assets/screenshot-delete.svg" alt="HA Entity Cleaner — Delete confirmation dialog" width="100%"/>
+<img src="assets/screenshot-delete.png" alt="HA Entity Cleaner — Delete confirmation dialog" width="100%"/>
 
 Before anything is deleted you must:
 1. Review the entity list by domain
 2. Check **"I have a current backup"**
 3. Type **`DELETE`** to unlock the button
 
-Referenced entities are automatically skipped even if selected. Per-entity errors are reported after the operation — nothing is silently dropped.
+Referenced entities are listed with the exact file/dashboard location they were found in, and are automatically skipped even if selected. Force-deleting offline or disabled entities shows an extra warning. Per-entity errors are reported after the operation — nothing is silently dropped.
 
 ---
 
