@@ -22,9 +22,23 @@
     <filter id="card-shadow">
       <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#000" flood-opacity="0.4"/>
     </filter>
-    <clipPath id="logo-clip">
-      <circle cx="160" cy="170" r="94"/>
-    </clipPath>
+    <!-- App-icon tile gradients -->
+    <linearGradient id="tile-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="55%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+    <radialGradient id="tile-hl" cx="28%" cy="22%" r="60%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="tile-broom" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#dbeafe"/>
+    </linearGradient>
+    <filter id="tile-shadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#0b1020" flood-opacity="0.45"/>
+    </filter>
   </defs>
 
   <!-- Background -->
@@ -42,47 +56,20 @@
     <line x1="1000" y1="0" x2="1000" y2="340"/>
   </g>
 
-  <!-- Left: Logo icon — person sweeping -->
-  <circle cx="160" cy="170" r="100" fill="#0c1828"/>
-  <circle cx="160" cy="170" r="100" fill="none" stroke="#38bdf8" stroke-width="2" opacity="0.35"/>
-  <!-- Person + broom + sparkles, scaled from 420×420 to fit circle -->
-  <!-- transform: translate(70,69) scale(0.455) maps logo coords into circle area -->
-  <g clip-path="url(#logo-clip)" transform="translate(70,69) scale(0.455)">
-    <!-- Broom handle -->
-    <line x1="282" y1="200" x2="148" y2="308" stroke="#475569" stroke-width="16" stroke-linecap="round"/>
-    <!-- Bristle head -->
-    <line x1="116" y1="272" x2="180" y2="344" stroke="#38bdf8" stroke-width="44" stroke-linecap="round"/>
-    <line x1="124" y1="280" x2="166" y2="330" stroke="#7dd3fc" stroke-width="9" stroke-linecap="round" opacity="0.42"/>
-    <!-- Head -->
-    <circle cx="302" cy="116" r="34" fill="#38bdf8"/>
-    <!-- Torso -->
-    <ellipse cx="286" cy="207" rx="30" ry="56" fill="#38bdf8" transform="rotate(-11 286 207)"/>
-    <!-- Right arm -->
-    <line x1="266" y1="180" x2="218" y2="252" stroke="#38bdf8" stroke-width="24" stroke-linecap="round"/>
-    <!-- Left leg -->
-    <line x1="270" y1="258" x2="240" y2="356" stroke="#38bdf8" stroke-width="24" stroke-linecap="round"/>
-    <!-- Right leg -->
-    <line x1="302" y1="258" x2="334" y2="344" stroke="#38bdf8" stroke-width="24" stroke-linecap="round"/>
-    <!-- Sparkle large -->
-    <g transform="translate(78,162)">
-      <line x1="0" y1="-21" x2="0" y2="21" stroke="#f59e0b" stroke-width="6.5" stroke-linecap="round"/>
-      <line x1="-21" y1="0" x2="21" y2="0" stroke="#f59e0b" stroke-width="6.5" stroke-linecap="round"/>
-      <line x1="-12" y1="-12" x2="12" y2="12" stroke="#f59e0b" stroke-width="3.5" stroke-linecap="round" opacity="0.60"/>
-      <line x1="12" y1="-12" x2="-12" y2="12" stroke="#f59e0b" stroke-width="3.5" stroke-linecap="round" opacity="0.60"/>
+  <!-- Left: App-icon tile (the actual logo, scaled from 420×420) -->
+  <!-- maps logo center (210,210) → (160,170) at scale 0.452 -->
+  <g transform="translate(65.1,75.1) scale(0.452)" filter="url(#tile-shadow)">
+    <rect width="420" height="420" rx="94" fill="url(#tile-bg)"/>
+    <rect width="420" height="420" rx="94" fill="url(#tile-hl)"/>
+    <!-- Broom (mdi:broom) -->
+    <g transform="translate(60,52) scale(13)">
+      <path fill="url(#tile-broom)" d="M19.36,2.72L20.78,4.14L15.06,9.85C16.13,11.39 16.28,13.24 15.38,14.44L9.06,8.12C10.26,7.22 12.11,7.37 13.65,8.44L19.36,2.72M5.93,17.57C3.92,15.56 2.69,13.16 2.35,10.92L7.23,8.83L14.67,16.27L12.58,21.15C10.34,20.81 7.94,19.58 5.93,17.57Z"/>
     </g>
-    <!-- Sparkle medium -->
-    <g transform="translate(54,232)">
-      <line x1="0" y1="-15" x2="0" y2="15" stroke="#f59e0b" stroke-width="5" stroke-linecap="round"/>
-      <line x1="-15" y1="0" x2="15" y2="0" stroke="#f59e0b" stroke-width="5" stroke-linecap="round"/>
-      <line x1="-9" y1="-9" x2="9" y2="9" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" opacity="0.60"/>
-      <line x1="9" y1="-9" x2="-9" y2="9" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" opacity="0.60"/>
-    </g>
-    <!-- Sparkle small -->
-    <g transform="translate(102,290)">
-      <line x1="0" y1="-10" x2="0" y2="10" stroke="#f59e0b" stroke-width="4" stroke-linecap="round"/>
-      <line x1="-10" y1="0" x2="10" y2="0" stroke="#f59e0b" stroke-width="4" stroke-linecap="round"/>
-      <line x1="-6" y1="-6" x2="6" y2="6" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" opacity="0.60"/>
-      <line x1="6" y1="-6" x2="-6" y2="6" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" opacity="0.60"/>
+    <!-- Sparkles -->
+    <g fill="#fde68a">
+      <path d="M115,87 C115,103 99,115 83,115 C99,115 115,127 115,143 C115,127 131,115 147,115 C131,115 115,103 115,87 Z"/>
+      <path d="M165,68 C165,77 156,84 147,84 C156,84 165,91 165,100 C165,91 174,84 183,84 C174,84 165,77 165,68 Z"/>
+      <path d="M92,162 C92,169 85,174 78,174 C85,174 92,179 92,186 C92,179 99,174 106,174 C99,174 92,169 92,162 Z"/>
     </g>
   </g>
 
