@@ -17,7 +17,12 @@ from .const import (
     BUCKET_ORPHAN,
     DOMAIN,
     WS_DELETE,
+    WS_DELETE_AREAS,
+    WS_DELETE_DEVICES,
+    WS_EXTRAS,
     WS_LIST,
+    WS_PURGE_RECORDER,
+    WS_RECORDER,
     WS_SCAN,
 )
 from .coordinator import (
@@ -26,6 +31,8 @@ from .coordinator import (
     classify,
     compute_score,
 )
+from .recorder_extras import async_purge_recorder, async_scan_recorder
+from .registry_extras import remove_areas, remove_devices, scan_registry_extras
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -39,6 +46,11 @@ def async_register_websocket_api(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_scan)
     websocket_api.async_register_command(hass, ws_list)
     websocket_api.async_register_command(hass, ws_delete)
+    websocket_api.async_register_command(hass, ws_extras)
+    websocket_api.async_register_command(hass, ws_delete_devices)
+    websocket_api.async_register_command(hass, ws_delete_areas)
+    websocket_api.async_register_command(hass, ws_recorder)
+    websocket_api.async_register_command(hass, ws_purge_recorder)
 
 
 # ---------------------------------------------------------------------------
@@ -215,3 +227,111 @@ async def ws_delete(
             "skipped_recent": skipped_recent,
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# ha_entity_cleaner/extras  — orphaned devices & empty areas
+# ---------------------------------------------------------------------------
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({vol.Required("type"): WS_EXTRAS})
+@websocket_api.async_response
+async def ws_extras(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict,
+) -> None:
+    """Return orphaned devices and empty areas with counts."""
+    extras = scan_registry_extras(hass)
+    connection.send_result(
+        msg["id"],
+        {
+            "devices": extras["devices"],
+            "areas": extras["areas"],
+            "summary": {
+                "device_count": len(extras["devices"]),
+                "area_count": len(extras["areas"]),
+            },
+        },
+    )
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_DELETE_DEVICES,
+        vol.Required("device_ids"): vol.All([str], vol.Length(max=1000)),
+        vol.Optional("dry_run", default=True): bool,
+    }
+)
+@websocket_api.async_response
+async def ws_delete_devices(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict,
+) -> None:
+    """Remove orphaned devices (zero entities) from the device registry."""
+    result = remove_devices(hass, msg["device_ids"], msg["dry_run"])
+    if not result["dry_run"]:
+        for coordinator in hass.data.get(DOMAIN, {}).values():
+            if isinstance(coordinator, EntityCleanerCoordinator):
+                await coordinator.async_request_refresh()
+    connection.send_result(msg["id"], result)
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_DELETE_AREAS,
+        vol.Required("area_ids"): vol.All([str], vol.Length(max=1000)),
+        vol.Optional("dry_run", default=True): bool,
+    }
+)
+@websocket_api.async_response
+async def ws_delete_areas(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict,
+) -> None:
+    """Delete empty areas (no devices, no entities)."""
+    result = remove_areas(hass, msg["area_ids"], msg["dry_run"])
+    connection.send_result(msg["id"], result)
+
+
+# ---------------------------------------------------------------------------
+# ha_entity_cleaner/recorder  — leftover statistics for deleted entities
+# ---------------------------------------------------------------------------
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({vol.Required("type"): WS_RECORDER})
+@websocket_api.async_response
+async def ws_recorder(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict,
+) -> None:
+    """Return recorder statistics belonging to entities that no longer exist."""
+    leftovers = await async_scan_recorder(hass)
+    connection.send_result(
+        msg["id"],
+        {"recorder": leftovers, "summary": {"recorder_count": len(leftovers)}},
+    )
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WS_PURGE_RECORDER,
+        vol.Required("entity_ids"): vol.All([str], vol.Length(max=1000)),
+        vol.Optional("dry_run", default=True): bool,
+    }
+)
+@websocket_api.async_response
+async def ws_purge_recorder(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict,
+) -> None:
+    """Purge recorder data for deleted entities via recorder.purge_entities."""
+    result = await async_purge_recorder(hass, msg["entity_ids"], msg["dry_run"])
+    connection.send_result(msg["id"], result)

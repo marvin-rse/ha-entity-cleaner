@@ -16,6 +16,11 @@ SERVICE_DELETE_ORPHANS = "delete_orphans"
 WS_SCAN = f"{DOMAIN}/scan"
 WS_LIST = f"{DOMAIN}/list"
 WS_DELETE = f"{DOMAIN}/delete"
+WS_EXTRAS = f"{DOMAIN}/extras"
+WS_DELETE_DEVICES = f"{DOMAIN}/delete_devices"
+WS_DELETE_AREAS = f"{DOMAIN}/delete_areas"
+WS_RECORDER = f"{DOMAIN}/recorder"
+WS_PURGE_RECORDER = f"{DOMAIN}/purge_recorder"
 
 # Sensor attribute cap (HA state-size guard).
 LIST_CAP = 100
