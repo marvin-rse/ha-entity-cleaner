@@ -26,7 +26,8 @@ p { margin: 6px 0; }
 .top-bar { display:flex; justify-content:space-between; align-items:flex-start;
            gap:16px; margin-bottom:24px; flex-wrap:wrap; }
 .title-row { display:flex; align-items:center; gap:12px; }
-.logo { font-size: 26px; }
+.logo { display:inline-flex; align-items:center; }
+.logo svg { display:block; border-radius:8px; }
 .header-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .card { background:var(--card-background-color); border:1px solid var(--divider-color);
         border-radius:14px; padding:18px; margin-bottom:16px; }
@@ -149,6 +150,13 @@ p { margin: 6px 0; }
   background:color-mix(in srgb,var(--c-offline) 10%,transparent);
   border:1px solid color-mix(in srgb,var(--c-offline) 40%,transparent);
   border-radius:8px; padding:10px 12px; font-size:12.5px; margin:10px 0; }
+.ref-list { margin-top:8px; display:flex; flex-direction:column; gap:7px;
+  max-height:150px; overflow:auto; }
+.ref-item { display:flex; flex-direction:column; gap:1px; padding-left:2px;
+  border-left:2px solid color-mix(in srgb,var(--c-offline) 55%,transparent); padding-left:8px; }
+.ref-eid { font-size:12px; color:var(--primary-text-color); word-break:break-all; }
+.ref-loc { font-size:11px; color:var(--secondary-text-color); word-break:break-all;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; }
 .cb-label { display:flex; gap:9px; align-items:flex-start; font-size:13px; margin:12px 0; cursor:pointer; }
 .field label { display:block; font-size:12px; color:var(--secondary-text-color); margin-bottom:5px; }
 .field input[type=text] { width:100%; background:var(--secondary-background-color);
@@ -160,6 +168,27 @@ p { margin: 6px 0; }
 .progress-fill { height:100%; background:var(--c-orphan); border-radius:20px; transition:width .3s; }
 .modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
 `;
+
+// Inline brand mark (matches assets/logo.svg — broom + sparkles on a blue tile).
+const LOGO_SVG = `
+<svg viewBox="0 0 420 420" width="34" height="34" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="hec-logo-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="55%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+  </defs>
+  <rect width="420" height="420" rx="96" fill="url(#hec-logo-bg)"/>
+  <g transform="translate(60,52) scale(13)">
+    <path fill="#ffffff" d="M19.36,2.72L20.78,4.14L15.06,9.85C16.13,11.39 16.28,13.24 15.38,14.44L9.06,8.12C10.26,7.22 12.11,7.37 13.65,8.44L19.36,2.72M5.93,17.57C3.92,15.56 2.69,13.16 2.35,10.92L7.23,8.83L14.67,16.27L12.58,21.15C10.34,20.81 7.94,19.58 5.93,17.57Z"/>
+  </g>
+  <g fill="#fde68a">
+    <path d="M115,87 C115,103 99,115 83,115 C99,115 115,127 115,143 C115,127 131,115 147,115 C131,115 115,103 115,87 Z"/>
+    <path d="M165,68 C165,77 156,84 147,84 C156,84 165,91 165,100 C165,91 174,84 183,84 C174,84 165,77 165,68 Z"/>
+    <path d="M92,162 C92,169 85,174 78,174 C85,174 92,179 92,186 C92,179 99,174 106,174 C99,174 92,169 92,162 Z"/>
+  </g>
+</svg>`;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -326,7 +355,7 @@ class HaEntityCleanerPanel extends HTMLElement {
   _renderHeader() {
     const wrap = el("div", { className: "top-bar" });
     const titleRow = el("div", { className: "title-row" },
-      el("span", { className: "logo" }, "🧹"),
+      (() => { const s = el("span", { className: "logo" }); s.innerHTML = LOGO_SVG; return s; })(),
       el("div", {},
         el("h1", {}, "HA Entity Cleaner"),
         el("p", { className: "sub" }, "Find, review, and safely remove orphaned entities"),
@@ -664,9 +693,26 @@ class HaEntityCleanerPanel extends HTMLElement {
       modal.appendChild(list);
 
       if (refCount) {
-        modal.appendChild(el("div", { className: "modal-warn" },
-          `⚠ ${refCount} selected entit${refCount === 1 ? "y is" : "ies are"} still referenced in your config and will be skipped (skip_referenced=true).`,
-        ));
+        const refItems = items.filter(i => i.referenced);
+        const warn = el("div", { className: "modal-warn", style: { flexDirection: "column" } },
+          el("div", {},
+            `⚠ ${refCount} selected entit${refCount === 1 ? "y is" : "ies are"} still referenced in your config and will be skipped (skip_referenced=true):`,
+          ),
+        );
+        const refList = el("div", { className: "ref-list" });
+        for (const it of refItems) {
+          const locs = it.used_in || [];
+          const shown = locs.slice(0, 6);
+          const locText = locs.length
+            ? shown.join(", ") + (locs.length > 6 ? ` …+${locs.length - 6} more` : "")
+            : "location not recorded";
+          refList.appendChild(el("div", { className: "ref-item" },
+            el("span", { className: "ref-eid mono" }, it.entity_id),
+            el("span", { className: "ref-loc" }, "↳ " + locText),
+          ));
+        }
+        warn.appendChild(refList);
+        modal.appendChild(warn);
       }
 
       if (this._bucket === "offline") {
