@@ -57,6 +57,7 @@ p { margin: 6px 0; }
 
 /* counters */
 .counters { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+.counters-3 { grid-template-columns:repeat(3,1fr); }
 @media(max-width:720px){ .counters { grid-template-columns:repeat(2,1fr); } }
 .counter { position:relative; overflow:hidden; padding:16px 16px 14px;
            background:var(--card-background-color); border:1px solid var(--divider-color);
@@ -249,6 +250,10 @@ function el(tag, attrs = {}, ...children) {
 
 function txt(s) { return document.createTextNode(s); }
 
+// Buckets backed by the device/area registries or recorder rather than the
+// entity registry — they use their own list rendering and delete WS calls.
+const EXTRA_BUCKETS = ["device", "area", "recorder"];
+
 // ---------------------------------------------------------------------------
 // Panel element
 // ---------------------------------------------------------------------------
@@ -274,7 +279,11 @@ class HaEntityCleanerPanel extends HTMLElement {
     this._forceOffline = false;
     this._forceDisabled = false;
     this._deleteProgress = 0;
+    this._extras = null;       // { devices, areas, summary }
+    this._recorder = null;     // { recorder, summary }
   }
+
+  _isExtraBucket(b) { return EXTRA_BUCKETS.includes(b ?? this._bucket); }
 
   set hass(h) {
     const first = !this._hass;
@@ -300,6 +309,40 @@ class HaEntityCleanerPanel extends HTMLElement {
       this._loading = false;
       this._render();
     }
+    // Registry extras and recorder leftovers are non-critical — load them
+    // separately so a failure here never blocks the main entity view.
+    try {
+      this._extras = await this._hass.callWS({ type: "ha_entity_cleaner/extras" });
+    } catch (e) {
+      this._extras = { devices: [], areas: [], summary: { device_count: 0, area_count: 0 } };
+    }
+    try {
+      this._recorder = await this._hass.callWS({ type: "ha_entity_cleaner/recorder" });
+    } catch (e) {
+      this._recorder = { recorder: [], summary: { recorder_count: 0 } };
+    }
+    this._render();
+  }
+
+  // Items for an extra bucket, normalised to a common shape for rendering.
+  _extraItems(bucket) {
+    if (bucket === "device") return (this._extras?.devices ?? []);
+    if (bucket === "area") return (this._extras?.areas ?? []);
+    if (bucket === "recorder") return (this._recorder?.recorder ?? []);
+    return [];
+  }
+
+  _extraId(bucket, item) {
+    if (bucket === "device") return item.device_id;
+    if (bucket === "area") return item.area_id;
+    return item.entity_id; // recorder
+  }
+
+  _extraCount(bucket) {
+    if (bucket === "device") return this._extras?.summary?.device_count ?? 0;
+    if (bucket === "area") return this._extras?.summary?.area_count ?? 0;
+    if (bucket === "recorder") return this._recorder?.summary?.recorder_count ?? 0;
+    return 0;
   }
 
   // ---- computed ------------------------------------------------------------
@@ -348,7 +391,7 @@ class HaEntityCleanerPanel extends HTMLElement {
     }
 
     if (this._deleteStep !== "idle") {
-      page.appendChild(this._renderModal());
+      page.appendChild(this._isExtraBucket() ? this._renderExtrasModal() : this._renderModal());
     }
 
     root.appendChild(page);
@@ -459,6 +502,30 @@ class HaEntityCleanerPanel extends HTMLElement {
     }
     frag.appendChild(counters);
 
+    // Registry & recorder counters (devices / areas / recorder leftovers)
+    const extraDefs = [
+      { key: "device", label: "Devices", sub: "No entities", color: "var(--c-ghost)" },
+      { key: "area", label: "Areas", sub: "Empty", color: "var(--c-disabled)" },
+      { key: "recorder", label: "Recorder", sub: "Stale stats", color: "var(--c-offline)" },
+    ];
+    const extraCounters = el("div", { className: "counters counters-3" });
+    for (const { key, label, sub, color: cc } of extraDefs) {
+      const cnt = this._extraCount(key);
+      const card = el("div", {
+        className: `counter${cnt ? " clickable" : ""}`,
+        style: { "--cc": cc },
+        title: `View ${label.toLowerCase()}`,
+      },
+        el("div", { className: "counter-bar" }),
+        el("div", { className: "counter-num mono" }, String(cnt)),
+        el("div", { className: "counter-lbl" }, label),
+        el("div", { className: "counter-sub" }, sub),
+      );
+      if (cnt) card.addEventListener("click", () => { this._bucket = key; this._view = "triage"; this._selected.clear(); this._render(); });
+      extraCounters.appendChild(card);
+    }
+    frag.appendChild(extraCounters);
+
     // Backup banner
     frag.appendChild(el("div", { className: "backup-banner" },
       el("span", {}, "⚠ "),
@@ -507,16 +574,26 @@ class HaEntityCleanerPanel extends HTMLElement {
         "Selection is enabled here — only delete if you intentionally want to remove these disabled entries.",
       ghost: "Entities in the state machine with no registry entry (YAML / MQTT retain). " +
         "Cannot be deleted via the registry — fix at source.",
+      device: "Devices in the device registry that have zero entities — leftovers from removed " +
+        "integrations or re-paired hardware. Deleting them only removes the empty registry entry.",
+      area: "Areas with no devices and no entities assigned. Safe to delete — they hold nothing.",
+      recorder: "Long-term statistics in the recorder database for entities that no longer exist. " +
+        "Purging reclaims database space via Home Assistant's recorder.purge_entities service.",
     };
-    const LABELS = { orphan: "Orphans", offline: "Offline", disabled: "Disabled", ghost: "Ghosts" };
+    const LABELS = {
+      orphan: "Orphans", offline: "Offline", disabled: "Disabled", ghost: "Ghosts",
+      device: "Devices", area: "Areas", recorder: "Recorder",
+    };
     const deletable = this._bucket !== "ghost";
 
     const wrap = el("div", { className: "triage" });
 
     // Tabs
     const tabs = el("div", { className: "tabs" });
-    for (const b of ["orphan", "offline", "disabled", "ghost"]) {
-      const count = this._data?.buckets[b]?.length ?? 0;
+    for (const b of ["orphan", "offline", "disabled", "ghost", "device", "area", "recorder"]) {
+      const count = this._isExtraBucket(b)
+        ? this._extraCount(b)
+        : (this._data?.buckets[b]?.length ?? 0);
       const tab = el("button", { className: `tab${this._bucket === b ? " active" : ""}` },
         LABELS[b],
         el("span", { className: "pill" }, String(count)),
@@ -528,6 +605,12 @@ class HaEntityCleanerPanel extends HTMLElement {
 
     // Bucket note
     wrap.appendChild(el("div", { className: "bucket-note" }, NOTES[this._bucket]));
+
+    // Device / area / recorder buckets have their own list + delete flow.
+    if (this._isExtraBucket()) {
+      this._renderExtrasBody(wrap);
+      return wrap;
+    }
 
     // Force-delete warning for offline / disabled
     if (this._bucket === "offline") {
@@ -603,6 +686,180 @@ class HaEntityCleanerPanel extends HTMLElement {
     }
 
     return wrap;
+  }
+
+  // ---- extras (devices / areas / recorder) ---------------------------------
+
+  _renderExtrasBody(wrap) {
+    const bucket = this._bucket;
+    const q = this._search.trim().toLowerCase();
+    const items = this._extraItems(bucket).filter(it => {
+      if (!q) return true;
+      const hay = `${this._extraId(bucket, it)} ${it.name || ""}`.toLowerCase();
+      return hay.includes(q);
+    });
+
+    if (bucket === "recorder") {
+      wrap.appendChild(el("div", { className: "backup-banner" },
+        el("span", {}, "⚠ "),
+        el("span", {}, [
+          el("strong", {}, "Irreversible."),
+          txt(" Purging removes recorded history and statistics for these entities from the database. This cannot be undone."),
+        ]),
+      ));
+    }
+
+    const toolbar = el("div", { className: "toolbar" });
+    const searchEl = el("input", {
+      className: "search", type: "text",
+      placeholder: bucket === "area" ? "Filter by area name…" : "Filter by name or id…",
+    });
+    searchEl.value = this._search;
+    searchEl.addEventListener("input", e => { this._search = e.target.value; this._render(); });
+    toolbar.appendChild(searchEl);
+    toolbar.appendChild(el("button", {
+      className: "btn btn-ghost",
+      onclick: () => { items.forEach(it => this._selected.add(this._extraId(bucket, it))); this._render(); },
+    }, "Select all"));
+    toolbar.appendChild(el("button", {
+      className: "btn btn-ghost",
+      onclick: () => { this._selected.clear(); this._render(); },
+    }, "Clear"));
+    toolbar.appendChild(el("span", { className: "sel-count" }, `${this._selected.size} selected`));
+    wrap.appendChild(toolbar);
+
+    const listEl = el("div", { className: "entity-list" });
+    if (!items.length) {
+      listEl.appendChild(el("div", { className: "empty" },
+        "Nothing in this category." + (this._search ? " Try clearing the filter." : " Your instance is clean here."),
+      ));
+    } else {
+      for (const it of items) listEl.appendChild(this._renderExtraRow(bucket, it));
+    }
+    wrap.appendChild(listEl);
+
+    const verb = bucket === "recorder" ? "Purge" : "Delete";
+    wrap.appendChild(el("div", { className: "action-bar" },
+      el("button", {
+        className: "btn btn-danger",
+        disabled: !this._selected.size,
+        onclick: () => { this._deleteStep = "confirm"; this._backupAck = false; this._deleteResult = null; this._render(); },
+      }, `${verb} selected (${this._selected.size})`),
+    ));
+  }
+
+  _renderExtraRow(bucket, item) {
+    const id = this._extraId(bucket, item);
+    const row = el("div", { className: "ent-row" });
+    const cb = el("input", { type: "checkbox", checked: this._selected.has(id) });
+    cb.addEventListener("change", e => {
+      if (e.target.checked) this._selected.add(id); else this._selected.delete(id);
+      this._render();
+    });
+    row.appendChild(cb);
+
+    if (bucket === "device") {
+      row.appendChild(el("span", { className: "eid" }, item.name || id));
+      const meta = [item.manufacturer, item.model].filter(Boolean).join(" · ");
+      if (meta) row.appendChild(el("span", { className: "reason" }, meta));
+      if (item.has_config_entry) {
+        row.appendChild(el("span", {
+          className: "ref-badge",
+          title: "Still claimed by a config entry — its integration may re-create it.",
+        }, "⚠ has config entry"));
+      }
+    } else if (bucket === "area") {
+      row.appendChild(el("span", { className: "eid" }, item.name || id));
+    } else { // recorder
+      row.appendChild(el("span", { className: "eid" }, id));
+      const tags = [];
+      if (item.unit) tags.push(item.unit);
+      if (item.has_mean) tags.push("mean");
+      if (item.has_sum) tags.push("sum");
+      if (tags.length) row.appendChild(el("span", { className: "reason" }, tags.join(" · ")));
+    }
+    return row;
+  }
+
+  _renderExtrasModal() {
+    const bucket = this._bucket;
+    const verb = bucket === "recorder" ? "Purge" : "Delete";
+    const overlay = el("div", { className: "overlay" });
+    overlay.addEventListener("click", e => { if (e.target === overlay && this._deleteStep !== "running") this._closeModal(); });
+    const modal = el("div", { className: "modal" });
+
+    if (this._deleteStep === "confirm") {
+      const ids = [...this._selected];
+      const noun = bucket === "device" ? "device" : bucket === "area" ? "area" : "entity";
+      modal.appendChild(el("h2", {}, `Confirm ${verb.toLowerCase()}`));
+      modal.appendChild(el("p", { className: "muted" },
+        `${ids.length} ${noun}${ids.length === 1 ? "" : "s"} will be ` +
+        (bucket === "recorder" ? "purged from the recorder database." : "removed from the registry."),
+      ));
+      const list = el("div", { className: "modal-list" });
+      list.textContent = ids.slice(0, 50).join("\n") + (ids.length > 50 ? `\n…+${ids.length - 50} more` : "");
+      modal.appendChild(list);
+      if (bucket === "recorder") {
+        modal.appendChild(el("div", { className: "modal-warn" },
+          "⚠ This permanently deletes recorded history & statistics for these entities."));
+      }
+      const deleteBtn = el("button", { className: "btn btn-danger", disabled: !this._backupAck, onclick: () => this._executeExtrasDelete() }, `${verb} now`);
+      const cbLabel = el("label", { className: "cb-label" },
+        el("input", { type: "checkbox", checked: this._backupAck }),
+        " I have a current backup of my Home Assistant instance.",
+      );
+      cbLabel.querySelector("input").addEventListener("change", e => { this._backupAck = e.target.checked; deleteBtn.disabled = !e.target.checked; });
+      modal.appendChild(cbLabel);
+      modal.appendChild(el("div", { className: "modal-actions" },
+        el("button", { className: "btn btn-ghost", onclick: () => this._closeModal() }, "Cancel"),
+        deleteBtn,
+      ));
+    } else if (this._deleteStep === "running") {
+      modal.appendChild(el("h2", {}, `${verb}ing…`));
+      modal.appendChild(el("div", { className: "progress-bar" },
+        el("div", { className: "progress-fill", style: { width: `${this._deleteProgress}%` } })));
+      modal.appendChild(el("p", { className: "muted" }, "Please wait."));
+    } else { // done
+      const r = this._deleteResult || {};
+      const n = r.removed_count ?? r.purged_count ?? 0;
+      modal.appendChild(el("h2", {}, n ? `${verb}d ${n}` : `Nothing ${verb.toLowerCase()}d`));
+      if (r.error) modal.appendChild(el("div", { className: "modal-warn" }, r.error));
+      if (r.failed?.length) {
+        const fl = el("div", { className: "modal-list" });
+        fl.textContent = r.failed.map(f => `${f.device_id || f.area_id || f.entity_id} — ${f.error}`).join("\n");
+        modal.appendChild(fl);
+      }
+      if (r.skipped?.length) {
+        modal.appendChild(el("p", { className: "muted small" }, `Skipped (changed since scan): ${r.skipped.length}`));
+      }
+      modal.appendChild(el("div", { className: "modal-actions" },
+        el("button", { className: "btn btn-ghost", onclick: () => this._closeModal() }, "Close"),
+      ));
+    }
+    overlay.appendChild(modal);
+    return overlay;
+  }
+
+  async _executeExtrasDelete() {
+    const bucket = this._bucket;
+    this._deleteStep = "running";
+    this._deleteProgress = 40;
+    this._render();
+    const ids = [...this._selected];
+    let type, key;
+    if (bucket === "device") { type = "ha_entity_cleaner/delete_devices"; key = "device_ids"; }
+    else if (bucket === "area") { type = "ha_entity_cleaner/delete_areas"; key = "area_ids"; }
+    else { type = "ha_entity_cleaner/purge_recorder"; key = "entity_ids"; }
+    try {
+      const result = await this._hass.callWS({ type, [key]: ids, dry_run: false });
+      this._deleteProgress = 100;
+      this._deleteResult = result;
+      this._selected.clear();
+    } catch (e) {
+      this._deleteResult = { error: e?.message || String(e), removed_count: 0, purged_count: 0 };
+    }
+    this._deleteStep = "done";
+    this._render();
   }
 
   _renderDomainGroup(domain, items, deletable) {
