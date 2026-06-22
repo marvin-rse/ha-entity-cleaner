@@ -1,6 +1,7 @@
 {
   "domain": "ha_entity_cleaner",
   "name": "HA Entity Cleaner",
+  "after_dependencies": ["recorder"],
   "codeowners": ["@marvin-rse"],
   "config_flow": true,
   "dependencies": ["http", "websocket_api"],
