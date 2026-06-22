@@ -436,8 +436,8 @@ class HaEntityCleanerPanel extends HTMLElement {
     const counters = el("div", { className: "counters" });
     const counterDefs = [
       { key: "orphan", label: "Orphans", sub: "Deletable", color: "var(--c-orphan)" },
-      { key: "offline", label: "Offline", sub: "Real, keep", color: "var(--c-offline)" },
       { key: "disabled", label: "Disabled", sub: "Intentional", color: "var(--c-disabled)" },
+      { key: "offline", label: "Offline", sub: "Real, keep", color: "var(--c-offline)" },
       { key: "ghost", label: "Ghosts", sub: "Fix at source", color: "var(--c-ghost)" },
     ];
     for (const { key, label, sub, color: cc } of counterDefs) {
@@ -513,7 +513,7 @@ class HaEntityCleanerPanel extends HTMLElement {
 
     // Tabs
     const tabs = el("div", { className: "tabs" });
-    for (const b of ["orphan", "offline", "disabled", "ghost"]) {
+    for (const b of ["orphan", "disabled", "offline", "ghost"]) {
       const count = this._data?.buckets[b]?.length ?? 0;
       const tab = el("button", { className: `tab${this._bucket === b ? " active" : ""}` },
         LABELS[b],
