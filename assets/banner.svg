@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" width="1200" height="340">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1117"/>
+      <stop offset="60%" style="stop-color:#111827"/>
+      <stop offset="100%" style="stop-color:#0f2235"/>
+    </linearGradient>
+    <linearGradient id="accent-bar" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f0556d"/>
+      <stop offset="33%" style="stop-color:#e3a93c"/>
+      <stop offset="66%" style="stop-color:#3fb950"/>
+      <stop offset="100%" style="stop-color:#38bdf8"/>
+    </linearGradient>
+    <linearGradient id="ring-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#38bdf8"/>
+      <stop offset="100%" style="stop-color:#0ea5e9"/>
+    </linearGradient>
+    <filter id="glow-filter">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="card-shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="10" flood-color="#000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="340" fill="url(#bg)"/>
+
+  <!-- Subtle grid lines -->
+  <g stroke="#1e293b" stroke-width="0.5" opacity="0.4">
+    <line x1="0" y1="85" x2="1200" y2="85"/>
+    <line x1="0" y1="170" x2="1200" y2="170"/>
+    <line x1="0" y1="255" x2="1200" y2="255"/>
+    <line x1="200" y1="0" x2="200" y2="340"/>
+    <line x1="400" y1="0" x2="400" y2="340"/>
+    <line x1="600" y1="0" x2="600" y2="340"/>
+    <line x1="800" y1="0" x2="800" y2="340"/>
+    <line x1="1000" y1="0" x2="1000" y2="340"/>
+  </g>
+
+  <!-- Left: Logo circle -->
+  <circle cx="160" cy="170" r="100" fill="#0f2235" opacity="0.8"/>
+  <circle cx="160" cy="170" r="100" fill="none" stroke="#38bdf8" stroke-width="2" opacity="0.3"/>
+
+  <!-- Broom in circle -->
+  <line x1="200" y1="120" x2="118" y2="202" stroke="#94a3b8" stroke-width="10" stroke-linecap="round"/>
+  <ellipse cx="112" cy="210" rx="38" ry="15" fill="#38bdf8" transform="rotate(-45 112 210)" opacity="0.9"/>
+  <g stroke="#0ea5e9" stroke-width="2.8" stroke-linecap="round">
+    <line x1="88" y1="222" x2="74" y2="237"/>
+    <line x1="96" y1="228" x2="84" y2="244"/>
+    <line x1="104" y1="232" x2="95" y2="249"/>
+    <line x1="113" y1="234" x2="107" y2="252"/>
+    <line x1="122" y1="230" x2="119" y2="249"/>
+    <line x1="130" y1="222" x2="130" y2="241"/>
+    <line x1="137" y1="212" x2="140" y2="231"/>
+  </g>
+
+  <!-- Center: Title block -->
+  <text x="300" y="125" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="52" font-weight="800" fill="#f1f5f9" letter-spacing="-1.5">HA Entity Cleaner</text>
+  <text x="302" y="165" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="20" fill="#64748b" letter-spacing="0.2">Find, review, and safely bulk-delete orphaned entities</text>
+
+  <!-- Feature pills row -->
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="13" font-weight="500">
+    <!-- Sidebar panel pill -->
+    <rect x="300" y="195" width="138" height="30" rx="15" fill="#1e3a5f" stroke="#38bdf8" stroke-width="1.5" opacity="0.9"/>
+    <text x="369" y="215" text-anchor="middle" fill="#38bdf8">⬛ Sidebar Panel</text>
+
+    <!-- Smart delete pill -->
+    <rect x="452" y="195" width="132" height="30" rx="15" fill="#2d1f1f" stroke="#f0556d" stroke-width="1.5" opacity="0.9"/>
+    <text x="518" y="215" text-anchor="middle" fill="#f0556d">🗑 Smart Delete</text>
+
+    <!-- Config scan pill -->
+    <rect x="598" y="195" width="148" height="30" rx="15" fill="#2d2a1a" stroke="#e3a93c" stroke-width="1.5" opacity="0.9"/>
+    <text x="672" y="215" text-anchor="middle" fill="#e3a93c">⚠ Config Scan</text>
+
+    <!-- HACS pill -->
+    <rect x="760" y="195" width="90" height="30" rx="15" fill="#1a2d1a" stroke="#3fb950" stroke-width="1.5" opacity="0.9"/>
+    <text x="805" y="215" text-anchor="middle" fill="#3fb950">✓ HACS</text>
+
+    <!-- Admin only pill -->
+    <rect x="864" y="195" width="106" height="30" rx="15" fill="#1e1e2d" stroke="#a78bfa" stroke-width="1.5" opacity="0.9"/>
+    <text x="917" y="215" text-anchor="middle" fill="#a78bfa">🔒 Admin Only</text>
+  </g>
+
+  <!-- Right: Cleanliness score ring preview -->
+  <g transform="translate(1040, 170)">
+    <!-- Ring background -->
+    <circle cx="0" cy="0" r="68" fill="#111827" stroke="#1e293b" stroke-width="1"/>
+    <!-- Ring track -->
+    <circle cx="0" cy="0" r="52" fill="none" stroke="#1e293b" stroke-width="10" transform="rotate(-90)"/>
+    <!-- Ring fill 74% = 264 * 0.74 = 195 -->
+    <circle cx="0" cy="0" r="52" fill="none" stroke="#38bdf8" stroke-width="10" stroke-linecap="round"
+      stroke-dasharray="195 264" transform="rotate(-90)" filter="url(#glow-filter)"/>
+    <text x="0" y="-8" text-anchor="middle" font-family="ui-monospace, monospace" font-size="28" font-weight="700" fill="#38bdf8">74</text>
+    <text x="0" y="14" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" fill="#64748b">Fair</text>
+    <text x="0" y="90" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="12" fill="#94a3b8">Cleanliness Score</text>
+  </g>
+
+  <!-- Bottom accent bar -->
+  <rect x="0" y="332" width="1200" height="4" fill="url(#accent-bar)" opacity="0.85"/>
+
+  <!-- Bottom badges -->
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="12" fill="#475569">
+    <text x="300" y="320">⭐ Cleanliness score 0–100</text>
+    <text x="500" y="320">🛡 Safe-delete guards</text>
+    <text x="670" y="320">📋 Export before delete</text>
+    <text x="840" y="320">🔍 Config-usage check</text>
+    <text x="1010" y="320">🚫 No telemetry</text>
+  </g>
+</svg>
