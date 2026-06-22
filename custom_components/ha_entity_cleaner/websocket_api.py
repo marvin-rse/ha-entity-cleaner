@@ -107,6 +107,8 @@ _DELETE_SCHEMA = {
     vol.Required("type"): WS_DELETE,
     vol.Required("entity_ids"): vol.All([str], vol.Length(max=500)),
     vol.Optional("include_uncertain", default=False): bool,
+    vol.Optional("include_offline", default=False): bool,
+    vol.Optional("include_disabled", default=False): bool,
     vol.Optional("min_age_days", default=0): vol.All(int, vol.Range(min=0)),
     vol.Optional("skip_referenced", default=True): bool,
     vol.Optional("dry_run", default=True): bool,
@@ -129,11 +131,15 @@ async def ws_delete(
 
     buckets = await async_scan_and_classify(hass, options)
 
-    # Build a lookup: entity_id → item (orphan bucket only).
+    # Build lookups per bucket.
     orphan_map: dict[str, dict] = {i["entity_id"]: i for i in buckets[BUCKET_ORPHAN]}
+    offline_map: dict[str, dict] = {i["entity_id"]: i for i in buckets[BUCKET_OFFLINE]}
+    disabled_map: dict[str, dict] = {i["entity_id"]: i for i in buckets[BUCKET_DISABLED]}
 
     requested: set[str] = set(msg["entity_ids"])
     include_uncertain: bool = msg["include_uncertain"]
+    include_offline: bool = msg["include_offline"]
+    include_disabled: bool = msg["include_disabled"]
     min_age_days: int = msg["min_age_days"]
     skip_referenced: bool = msg["skip_referenced"]
     dry_run: bool = msg["dry_run"]
@@ -141,25 +147,36 @@ async def ws_delete(
 
     deleted: list[str] = []
     failed: list[dict] = []
-    skipped_not_orphan: list[str] = []
+    skipped_not_deletable: list[str] = []
     skipped_uncertain: list[str] = []
     skipped_referenced: list[str] = []
     skipped_recent: list[str] = []
 
     for entity_id in requested:
-        # Must be in the orphan bucket — refuse everything else.
+        # Determine which bucket this entity belongs to.
         item = orphan_map.get(entity_id)
+        bucket = BUCKET_ORPHAN
+
+        if item is None and include_offline:
+            item = offline_map.get(entity_id)
+            bucket = BUCKET_OFFLINE
+
+        if item is None and include_disabled:
+            item = disabled_map.get(entity_id)
+            bucket = BUCKET_DISABLED
+
+        # Ghost entities and anything not explicitly allowed → skip.
         if item is None:
-            skipped_not_orphan.append(entity_id)
+            skipped_not_deletable.append(entity_id)
             continue
 
-        if not item["safe"] and not include_uncertain:
-            skipped_uncertain.append(entity_id)
-            continue
-
-        if skip_referenced and item["referenced"]:
-            skipped_referenced.append(entity_id)
-            continue
+        if bucket == BUCKET_ORPHAN:
+            if not item["safe"] and not include_uncertain:
+                skipped_uncertain.append(entity_id)
+                continue
+            if skip_referenced and item["referenced"]:
+                skipped_referenced.append(entity_id)
+                continue
 
         if min_age_days:
             state = hass.states.get(entity_id)
@@ -192,7 +209,7 @@ async def ws_delete(
             "deleted": deleted,
             "deleted_count": len(deleted),
             "failed": failed,
-            "skipped_not_orphan": skipped_not_orphan,
+            "skipped_not_deletable": skipped_not_deletable,
             "skipped_uncertain": skipped_uncertain,
             "skipped_referenced": skipped_referenced,
             "skipped_recent": skipped_recent,

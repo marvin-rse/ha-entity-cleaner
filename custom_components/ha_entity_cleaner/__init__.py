@@ -25,6 +25,8 @@ DELETE_SCHEMA = vol.Schema(
         vol.Optional("domains"): vol.All(cv.ensure_list, [cv.string]),
         vol.Optional("entity_ids"): vol.All(cv.ensure_list, [cv.string]),
         vol.Optional("include_uncertain", default=False): cv.boolean,
+        vol.Optional("include_offline", default=False): cv.boolean,
+        vol.Optional("include_disabled", default=False): cv.boolean,
         vol.Optional("min_age_days", default=0): vol.All(int, vol.Range(min=0)),
         vol.Optional("skip_referenced", default=True): cv.boolean,
         vol.Optional("dry_run", default=True): cv.boolean,
@@ -87,6 +89,8 @@ def _register_services(hass: HomeAssistant) -> None:
         domains = call.data.get("domains")
         explicit = call.data.get("entity_ids")
         include_uncertain = call.data.get("include_uncertain", False)
+        include_offline = call.data.get("include_offline", False)
+        include_disabled = call.data.get("include_disabled", False)
         min_age_days = call.data.get("min_age_days", 0)
         skip_referenced = call.data.get("skip_referenced", True)
         dry_run = call.data.get("dry_run", True)
@@ -97,24 +101,32 @@ def _register_services(hass: HomeAssistant) -> None:
         skipped_uncertain = 0
         skipped_referenced = 0
 
-        for item in buckets["orphan"]:
-            entity_id = item["entity_id"]
-            if not item["safe"] and not include_uncertain:
-                skipped_uncertain += 1
-                continue
-            if explicit is not None and entity_id not in explicit:
-                continue
-            if domains is not None and item["domain"] not in domains:
-                continue
-            if skip_referenced and item["referenced"]:
-                skipped_referenced += 1
-                continue
-            if min_age_days:
-                state = hass.states.get(entity_id)
-                if state and (now - state.last_changed).days < min_age_days:
-                    skipped_recent.append(entity_id)
+        candidate_buckets = [("orphan", buckets.get("orphan", []))]
+        if include_offline:
+            candidate_buckets.append(("offline", buckets.get("offline", [])))
+        if include_disabled:
+            candidate_buckets.append(("disabled", buckets.get("disabled", [])))
+
+        for bucket_name, items in candidate_buckets:
+            for item in items:
+                entity_id = item["entity_id"]
+                if explicit is not None and entity_id not in explicit:
                     continue
-            targets.append(entity_id)
+                if domains is not None and item["domain"] not in domains:
+                    continue
+                if bucket_name == "orphan":
+                    if not item["safe"] and not include_uncertain:
+                        skipped_uncertain += 1
+                        continue
+                    if skip_referenced and item["referenced"]:
+                        skipped_referenced += 1
+                        continue
+                if min_age_days:
+                    state = hass.states.get(entity_id)
+                    if state and (now - state.last_changed).days < min_age_days:
+                        skipped_recent.append(entity_id)
+                        continue
+                targets.append(entity_id)
 
         deleted: list[str] = []
         failed: list[dict] = []

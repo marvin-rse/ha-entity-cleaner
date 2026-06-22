@@ -29,6 +29,7 @@ Home Assistant accumulates "zombie" entities — registry leftovers from removed
 | 🗂 **Smart classification** | Orphan (safe / uncertain), offline, disabled, ghost — with human-readable reasons |
 | 🔍 **Config-usage check** | Flags entities still referenced in YAML or Lovelace dashboards before you can delete them |
 | 🗑 **Smart delete** | Dry-run by default · skip-referenced on · min-age filter · per-entity error reporting |
+| ⚠️ **Force-delete** | Optionally delete offline or disabled entities with explicit opt-in flags and safety warnings |
 | 📋 **Export first** | Export your selection as JSON before any deletion |
 | ⚙️ **Ignore rules** | Exclude by entity_id wildcard, HA label, or file glob |
 | 🔒 **Admin-only** | Panel and all WS commands require admin access |
@@ -88,11 +89,13 @@ The decisive signal is **whether the integration that created the entity still e
 |--------|---------|-----------|
 | **orphan · safe** | Config entry removed, or integration no longer loaded | Yes |
 | **orphan · uncertain** | No config entry; source unclear — review before deleting | Only with `include_uncertain: true` |
-| **offline** | Config entry still present; device temporarily unreachable | **Never** — it will come back |
-| **disabled** | Explicitly disabled in the registry | No |
+| **offline** | Config entry still present; device temporarily unreachable | Only with `include_offline: true` ⚠️ |
+| **disabled** | Explicitly disabled in the registry | Only with `include_disabled: true` ⚠️ |
 | **ghost** | State machine entry with no registry entry (YAML / MQTT) | No — fix at source |
 
-> **A WLED light that is unplugged is "offline", never an orphan.** Its config entry still exists, so HA Entity Cleaner will never touch it.
+> **⚠️ Force-delete warning:** `include_offline` and `include_disabled` require explicit opt-in. Offline entities belong to a live integration — deleting them may break automations or require re-pairing hardware. The panel shows a prominent warning banner and confirmation prompt before proceeding.
+
+> **A WLED light that is unplugged is "offline", never an orphan.** Its config entry still exists, so HA Entity Cleaner will not touch it unless you explicitly enable `include_offline`.
 
 ### Config-usage check (Watchman-inspired)
 
@@ -207,6 +210,30 @@ data:
 response_variable: result
 ```
 
+```yaml
+# Force-delete offline entities (use with caution — take a backup first):
+action: ha_entity_cleaner.delete_orphans
+data:
+  dry_run: false
+  include_offline: true
+  entity_ids:
+    - sensor.old_device_temperature
+response_variable: result
+```
+
+**Service parameters:**
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `dry_run` | `true` | Preview mode — nothing is deleted |
+| `domains` | — | Limit to these domains |
+| `entity_ids` | — | Explicit list of entity IDs |
+| `include_uncertain` | `false` | Include uncertain orphans |
+| `include_offline` | `false` | ⚠️ Force-delete offline entities |
+| `include_disabled` | `false` | ⚠️ Force-delete disabled entities |
+| `min_age_days` | `0` | Skip entities changed within this many days |
+| `skip_referenced` | `true` | Skip entities still referenced in config |
+
 **Response fields:** `matched`, `matched_count`, `deleted`, `deleted_count`, `failed`, `skipped_recent`, `skipped_uncertain`, `skipped_referenced`.
 
 ---
@@ -219,14 +246,14 @@ All commands require admin access (`@require_admin`).
 |---------|-------------|
 | `ha_entity_cleaner/scan` | Trigger immediate refresh |
 | `ha_entity_cleaner/list` | Returns `{buckets, summary}` with score |
-| `ha_entity_cleaner/delete` | Delete with guards: `entity_ids`, `include_uncertain`, `min_age_days`, `skip_referenced`, `dry_run` |
+| `ha_entity_cleaner/delete` | Delete with guards: `entity_ids`, `include_uncertain`, `include_offline`, `include_disabled`, `min_age_days`, `skip_referenced`, `dry_run` |
 
 ---
 
 ## Safety
 
 - **Default dry-run** — nothing is ever deleted without explicit opt-in
-- **Offline devices protected** — config-entry-backed entities are never orphans, regardless of state
+- **Offline/disabled protected by default** — require explicit `include_offline: true` / `include_disabled: true` to touch them; panel shows a force-delete warning
 - **Referenced entities skipped** — `skip_referenced: true` by default
 - **Two-factor confirmation** — typed `DELETE` + backup checkbox in the panel
 - **Admin-only** — panel (`require_admin: True`) and all WS commands are inaccessible to regular users
