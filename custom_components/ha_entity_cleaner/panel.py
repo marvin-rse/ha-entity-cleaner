@@ -7,6 +7,7 @@ from pathlib import Path
 from homeassistant.components.frontend import async_register_built_in_panel
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant
+from homeassistant.loader import async_get_integration
 
 from .const import DOMAIN
 
@@ -25,6 +26,14 @@ async def async_register_panel(hass: HomeAssistant) -> None:
         [StaticPathConfig(_STATIC_URL, str(www_path), cache_headers=False)]
     )
 
+    # Version-stamp the module URL so each release busts the browser's ES-module
+    # cache (otherwise the old panel — and its old logo — keeps being served).
+    try:
+        integration = await async_get_integration(hass, DOMAIN)
+        version = str(integration.manifest.get("version") or "0")
+    except Exception:  # noqa: BLE001
+        version = "0"
+
     async_register_built_in_panel(
         hass,
         component_name="custom",
@@ -34,12 +43,13 @@ async def async_register_panel(hass: HomeAssistant) -> None:
         config={
             "_panel_custom": {
                 "name": "ha-entity-cleaner-panel",
-                "module_url": f"{_STATIC_URL}/{_JS_FILE}",
-            }
+                "module_url": f"{_STATIC_URL}/{_JS_FILE}?v={version}",
+            },
+            "version": version,
         },
         require_admin=True,
     )
-    _LOGGER.debug("Entity Cleaner panel registered at /%s", _PANEL_URL)
+    _LOGGER.debug("Entity Cleaner panel registered at /%s (v%s)", _PANEL_URL, version)
 
 
 def async_unregister_panel(hass: HomeAssistant) -> None:

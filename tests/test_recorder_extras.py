@@ -58,16 +58,38 @@ async def test_purge_dry_run_does_not_call_service(hass):
     hass.services.async_call.assert_not_called()
 
 
-async def test_purge_real_run_calls_service_for_confirmed_targets(hass):
+async def test_purge_real_run_clears_statistics_for_confirmed_targets(hass):
     hass.services.has_service.return_value = True
     hass.services.async_call = AsyncMock()
-    with patch(f"{MOD}.async_scan_recorder", AsyncMock(return_value=[{"entity_id": "sensor.gone"}])):
+
+    instance = MagicMock()
+    captured = {}
+
+    async def _exec(fn, *args):
+        captured["fn"] = fn
+        captured["args"] = args
+        return fn(*args)
+
+    instance.async_add_executor_job = _exec
+
+    fake_recorder = MagicMock()
+    fake_recorder.get_instance.return_value = instance
+    fake_stats = MagicMock()
+    fake_stats.clear_statistics = MagicMock()
+
+    with patch(f"{MOD}.async_scan_recorder", AsyncMock(return_value=[{"entity_id": "sensor.gone"}])), \
+         patch.dict("sys.modules", {
+             "homeassistant.components.recorder": fake_recorder,
+             "homeassistant.components.recorder.statistics": fake_stats,
+         }):
         result = await recorder_extras.async_purge_recorder(
             hass, ["sensor.gone", "sensor.not_leftover"], dry_run=False
         )
+
     assert result["purged"] == ["sensor.gone"]
     assert result["skipped"] == ["sensor.not_leftover"]
+    # clear_statistics(instance, ["sensor.gone"]) was run in the recorder executor.
+    assert captured["fn"] is fake_stats.clear_statistics
+    assert captured["args"] == (instance, ["sensor.gone"])
+    # best-effort purge_entities mop-up also fired.
     hass.services.async_call.assert_awaited_once()
-    args = hass.services.async_call.await_args
-    assert args.args[0] == "recorder" and args.args[1] == "purge_entities"
-    assert args.args[2] == {"entity_id": ["sensor.gone"]}
