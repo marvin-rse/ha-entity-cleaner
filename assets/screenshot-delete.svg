@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 860" width="1280" height="860">
+  <!-- Background (blurred panel behind modal) -->
+  <rect width="1280" height="860" fill="#111827"/>
+  <rect width="1280" height="38" fill="#0f172a"/>
+  <circle cx="18" cy="19" r="7" fill="#ef4444" opacity="0.8"/>
+  <circle cx="38" cy="19" r="7" fill="#f59e0b" opacity="0.8"/>
+  <circle cx="58" cy="19" r="7" fill="#22c55e" opacity="0.8"/>
+  <text x="640" y="25" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="13" fill="#64748b">Home Assistant — HA Entity Cleaner</text>
+
+  <!-- Sidebar -->
+  <rect x="0" y="38" width="72" height="822" fill="#111827"/>
+  <rect x="16" y="148" width="40" height="40" rx="10" fill="#1e3a5f"/>
+  <rect x="15" y="148" width="3" height="40" rx="1.5" fill="#38bdf8"/>
+  <text x="36" y="174" text-anchor="middle" fill="#38bdf8" font-size="18">🧹</text>
+
+  <!-- Dimmed panel content -->
+  <rect x="72" y="38" width="1208" height="822" fill="#111827" opacity="0.9"/>
+
+  <!-- Faint triage content behind -->
+  <rect x="100" y="100" width="1160" height="44" rx="8" fill="#1e293b" opacity="0.3"/>
+  <rect x="100" y="244" width="1160" height="44" rx="8" fill="#1e293b" opacity="0.25"/>
+  <rect x="100" y="298" width="1160" height="44" fill="#172033" opacity="0.2"/>
+  <rect x="100" y="340" width="1160" height="44" fill="#111827" opacity="0.2"/>
+
+  <!-- Dark overlay -->
+  <rect x="72" y="38" width="1208" height="822" fill="#020508" opacity="0.6"/>
+
+  <!-- ═══════════ MODAL ═══════════ -->
+  <rect x="380" y="140" width="520" height="570" rx="18" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <!-- Modal inner shadow top -->
+  <rect x="380" y="140" width="520" height="4" rx="2" fill="#263548" opacity="0.5"/>
+
+  <!-- Modal header -->
+  <text x="420" y="192" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-size="22" font-weight="700" fill="#f1f5f9">Confirm deletion</text>
+  <text x="420" y="220" font-family="-apple-system, sans-serif" font-size="14" fill="#64748b">7 entities will be permanently removed from the registry.</text>
+
+  <!-- Entity summary list -->
+  <rect x="420" y="236" width="420" height="100" rx="10" fill="#111827" stroke="#263548" stroke-width="1"/>
+  <text x="444" y="264" font-family="ui-monospace, monospace" font-size="13" fill="#94a3b8">button: 5</text>
+  <text x="444" y="286" font-family="ui-monospace, monospace" font-size="13" fill="#94a3b8">sensor: 2</text>
+  <!-- scroll hint -->
+  <text x="780" y="330" text-anchor="end" font-family="-apple-system, sans-serif" font-size="11" fill="#334155">▼</text>
+
+  <!-- Warning: referenced entity -->
+  <rect x="420" y="350" width="420" height="60" rx="8" fill="#1a1500" stroke="#92400e" stroke-width="1"/>
+  <text x="444" y="372" font-family="-apple-system, sans-serif" font-size="13" fill="#fbbf24">⚠</text>
+  <text x="468" y="372" font-family="-apple-system, sans-serif" font-size="13" fill="#d97706">1 selected entity is still referenced</text>
+  <text x="444" y="395" font-family="-apple-system, sans-serif" font-size="12" fill="#92400e">in your config and will be skipped (skip_referenced=true).</text>
+
+  <!-- Backup checkbox -->
+  <rect x="420" y="428" width="20" height="20" rx="5" fill="#0ea5e9"/>
+  <text x="429" y="442" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">✓</text>
+  <text x="450" y="442" font-family="-apple-system, sans-serif" font-size="14" fill="#f1f5f9">I have a current backup of my Home Assistant instance.</text>
+
+  <!-- Confirm label -->
+  <text x="420" y="482" font-family="-apple-system, sans-serif" font-size="12" fill="#64748b">Type <tspan font-weight="700" fill="#f1f5f9">DELETE</tspan> to confirm</text>
+
+  <!-- Confirm input -->
+  <rect x="420" y="496" width="420" height="44" rx="9" fill="#111827" stroke="#0ea5e9" stroke-width="2"/>
+  <text x="444" y="523" font-family="ui-monospace, monospace" font-size="16" font-weight="600" fill="#f1f5f9">DELETE</text>
+  <!-- Cursor blink -->
+  <rect x="512" y="508" width="2" height="20" rx="1" fill="#94a3b8" opacity="0.8"/>
+
+  <!-- Modal action buttons -->
+  <rect x="420" y="560" width="100" height="40" rx="9" fill="#263548" stroke="#334155" stroke-width="1"/>
+  <text x="470" y="585" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="13" fill="#94a3b8">Cancel</text>
+
+  <rect x="536" y="560" width="304" height="40" rx="9" fill="#ef4444"/>
+  <text x="688" y="585" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="14" font-weight="600" fill="#fff">Delete now</text>
+
+  <!-- Modal close X -->
+  <text x="876" y="175" font-family="-apple-system, sans-serif" font-size="18" fill="#475569" cursor="pointer">×</text>
+
+  <!-- Side annotation callouts (to explain features) -->
+  <!-- Callout 1: typed confirmation -->
+  <line x1="840" y1="518" x2="960" y2="440" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.7"/>
+  <rect x="960" y="405" width="260" height="56" rx="9" fill="#0f2235" stroke="#1e3a5f" stroke-width="1"/>
+  <text x="1090" y="428" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="12" fill="#94a3b8">Must type</text>
+  <text x="1090" y="448" text-anchor="middle" font-family="ui-monospace, monospace" font-size="13" font-weight="700" fill="#38bdf8">DELETE</text>
+  <text x="1090" y="464" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" fill="#64748b">to unlock the button</text>
+
+  <!-- Callout 2: referenced skip -->
+  <line x1="840" y1="375" x2="960" y2="345" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.7"/>
+  <rect x="960" y="310" width="260" height="52" rx="9" fill="#1a1500" stroke="#92400e" stroke-width="1"/>
+  <text x="1090" y="333" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="12" fill="#d97706">Referenced entities</text>
+  <text x="1090" y="353" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" fill="#92400e">skipped even if selected</text>
+
+  <!-- Callout 3: backup ack -->
+  <line x1="420" y1="438" x2="310" y2="490" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.7"/>
+  <rect x="90" y="462" width="220" height="52" rx="9" fill="#0a1f0a" stroke="#166534" stroke-width="1"/>
+  <text x="200" y="484" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="12" fill="#22c55e">Backup acknowledgement</text>
+  <text x="200" y="503" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" fill="#166534">required before delete unlocks</text>
+</svg>
