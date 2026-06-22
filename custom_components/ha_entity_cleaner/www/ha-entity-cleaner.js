@@ -119,6 +119,8 @@ p { margin: 6px 0; }
 .ent-row.ref { background:color-mix(in srgb,var(--c-offline) 6%,transparent); }
 .cb-space { width:16px; height:16px; flex-shrink:0; }
 .eid { flex:1; font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; word-break:break-all; min-width:120px; }
+.eid-link { cursor:pointer; }
+.eid-link:hover { color:var(--primary-color); text-decoration:underline; }
 .reason { font-size:11.5px; color:var(--secondary-text-color); font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; }
 .age { font-size:11px; white-space:nowrap; color:var(--secondary-text-color); }
 .ref-badge { display:inline-flex; align-items:center; gap:3px; font-size:11px;
@@ -650,7 +652,17 @@ class HaEntityCleanerPanel extends HTMLElement {
       row.appendChild(el("span", { className: "cb-space" }));
     }
 
-    row.appendChild(el("span", { className: "eid" }, item.entity_id));
+    // entity_id opens the native more-info dialog (works for entities with a state).
+    const eid = el("span", { className: "eid eid-link", title: "Open entity details" }, item.entity_id);
+    eid.addEventListener("click", (e) => {
+      e.stopPropagation();
+      eid.dispatchEvent(new CustomEvent("hass-more-info", {
+        detail: { entityId: item.entity_id },
+        bubbles: true,
+        composed: true,
+      }));
+    });
+    row.appendChild(eid);
 
     const reasonColor = this._bucket === "orphan"
       ? (item.safe ? "var(--c-ok)" : "var(--c-offline)")
@@ -658,7 +670,12 @@ class HaEntityCleanerPanel extends HTMLElement {
     row.appendChild(el("span", { className: "reason", style: { color: reasonColor } }, item.reason));
 
     const age = ageStr(item.last_changed);
-    if (age) row.appendChild(el("span", { className: "age" }, age));
+    if (age) {
+      const exact = item.last_changed ? new Date(item.last_changed).toLocaleString() : "";
+      // For offline entities, last_changed ≈ when the device went unreachable.
+      const label = this._bucket === "offline" ? `last seen ${age}` : age;
+      row.appendChild(el("span", { className: "age", title: exact }, label));
+    }
 
     if (item.referenced) {
       const tip = (item.used_in || []).slice(0, 5).join(", ") + (item.used_in?.length > 5 ? ` …+${item.used_in.length - 5} more` : "");
