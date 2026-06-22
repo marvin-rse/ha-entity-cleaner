@@ -240,6 +240,8 @@ class HaEntityCleanerPanel extends HTMLElement {
     this._deleteResult = null;
     this._confirmText = "";
     this._backupAck = false;
+    this._forceOffline = false;
+    this._forceDisabled = false;
     this._deleteProgress = 0;
   }
 
@@ -469,13 +471,14 @@ class HaEntityCleanerPanel extends HTMLElement {
         "Green = config entry deleted (high confidence). Amber = no config entry found (review before deleting). " +
         "Devices that are simply offline appear in the Offline tab, never here.",
       offline: "Real devices whose integration is still installed but temporarily unreachable. " +
-        "Do NOT delete — they will come back when powered on. Selection is intentionally disabled here.",
-      disabled: "Entities explicitly disabled in the registry. Not zombies, don't need to be removed.",
+        "Selection is enabled here — only delete if you are certain the device is permanently gone.",
+      disabled: "Entities explicitly disabled in the registry. " +
+        "Selection is enabled here — only delete if you intentionally want to remove these disabled entries.",
       ghost: "Entities in the state machine with no registry entry (YAML / MQTT retain). " +
         "Cannot be deleted via the registry — fix at source.",
     };
     const LABELS = { orphan: "Orphans", offline: "Offline", disabled: "Disabled", ghost: "Ghosts" };
-    const deletable = this._bucket === "orphan";
+    const deletable = this._bucket !== "ghost";
 
     const wrap = el("div", { className: "triage" });
 
@@ -494,6 +497,25 @@ class HaEntityCleanerPanel extends HTMLElement {
 
     // Bucket note
     wrap.appendChild(el("div", { className: "bucket-note" }, NOTES[this._bucket]));
+
+    // Force-delete warning for offline / disabled
+    if (this._bucket === "offline") {
+      wrap.appendChild(el("div", { className: "backup-banner" },
+        el("span", {}, "⚠ "),
+        el("span", {}, [
+          el("strong", {}, "Force-delete active."),
+          txt(" Offline entities belong to an installed integration — deleting them may break automations or require re-pairing the device."),
+        ]),
+      ));
+    } else if (this._bucket === "disabled") {
+      wrap.appendChild(el("div", { className: "backup-banner" },
+        el("span", {}, "⚠ "),
+        el("span", {}, [
+          el("strong", {}, "Force-delete active."),
+          txt(" Disabled entities were intentionally kept in the registry — deleting them is permanent and cannot be undone by toggling them back."),
+        ]),
+      ));
+    }
 
     // Toolbar
     const toolbar = el("div", { className: "toolbar" });
@@ -647,6 +669,16 @@ class HaEntityCleanerPanel extends HTMLElement {
         ));
       }
 
+      if (this._bucket === "offline") {
+        modal.appendChild(el("div", { className: "modal-warn" },
+          "⚠ You are force-deleting offline entities. This may break automations or require re-pairing devices.",
+        ));
+      } else if (this._bucket === "disabled") {
+        modal.appendChild(el("div", { className: "modal-warn" },
+          "⚠ You are force-deleting disabled entities. They cannot be recovered from the registry after deletion.",
+        ));
+      }
+
       const cbLabel = el("label", { className: "cb-label" },
         el("input", { type: "checkbox", checked: this._backupAck }),
         " I have a current backup of my Home Assistant instance.",
@@ -684,6 +716,11 @@ class HaEntityCleanerPanel extends HTMLElement {
         const failList = el("div", { className: "modal-list" });
         failList.textContent = r.failed.map(f => `${f.entity_id} — ${f.error}`).join("\n");
         modal.appendChild(failList);
+      }
+      if (r?.skipped_not_deletable?.length) {
+        modal.appendChild(el("p", { className: "muted small" },
+          `Skipped (not in expected bucket): ${r.skipped_not_deletable.join(", ")}`,
+        ));
       }
       if (r?.skipped_referenced?.length) {
         modal.appendChild(el("p", { className: "muted small" },
@@ -743,6 +780,8 @@ class HaEntityCleanerPanel extends HTMLElement {
         type: "ha_entity_cleaner/delete",
         entity_ids: entityIds,
         include_uncertain: false,
+        include_offline: this._bucket === "offline",
+        include_disabled: this._bucket === "disabled",
         min_age_days: 0,
         skip_referenced: true,
         dry_run: false,
@@ -754,7 +793,7 @@ class HaEntityCleanerPanel extends HTMLElement {
       this._deleteResult = {
         deleted: [], deleted_count: 0,
         failed: [{ entity_id: "—", error: e?.message || String(e) }],
-        skipped_not_orphan: [], skipped_uncertain: [], skipped_referenced: [], skipped_recent: [],
+        skipped_not_deletable: [], skipped_uncertain: [], skipped_referenced: [], skipped_recent: [],
       };
     }
     this._deleteStep = "done";
