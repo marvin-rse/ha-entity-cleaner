@@ -26,6 +26,8 @@ p { margin: 6px 0; }
 .top-bar { display:flex; justify-content:space-between; align-items:flex-start;
            gap:16px; margin-bottom:24px; flex-wrap:wrap; }
 .title-row { display:flex; align-items:center; gap:12px; }
+.ver { font-size:12px; font-weight:500; color:var(--secondary-text-color);
+       margin-left:8px; vertical-align:middle; letter-spacing:0; }
 .logo { display:inline-flex; align-items:center; }
 .logo svg { display:block; border-radius:8px; }
 .header-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
@@ -425,7 +427,10 @@ class HaEntityCleanerPanel extends HTMLElement {
     const titleRow = el("div", { className: "title-row" },
       (() => { const s = el("span", { className: "logo" }); s.innerHTML = LOGO_SVG; return s; })(),
       el("div", {},
-        el("h1", {}, "HA Entity Cleaner"),
+        el("h1", {},
+          "HA Entity Cleaner",
+          this._version ? el("span", { className: "ver" }, `v${this._version}`) : null,
+        ),
         el("p", { className: "sub" }, "Find, review, and safely remove orphaned entities"),
       ),
     );
