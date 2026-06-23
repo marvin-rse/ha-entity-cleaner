@@ -996,7 +996,6 @@ class HaEntityCleanerPanel extends HTMLElement {
 
     if (this._deleteStep === "confirm") {
       const items = this._selectedItems;
-      const groups = groupByDomain(items);
       const refCount = items.filter(i => i.referenced).length;
       const confirmed = this._backupAck && this._confirmText.trim().toUpperCase() === "DELETE";
 
@@ -1006,7 +1005,9 @@ class HaEntityCleanerPanel extends HTMLElement {
       ));
 
       const list = el("div", { className: "modal-list" });
-      list.textContent = [...groups.entries()].map(([d, l]) => `${d}: ${l.length}`).join("\n");
+      const ids = items.map(i => i.entity_id);
+      const CAP = 200;
+      list.textContent = ids.slice(0, CAP).join("\n") + (ids.length > CAP ? `\n…+${ids.length - CAP} more` : "");
       modal.appendChild(list);
 
       if (refCount) {
