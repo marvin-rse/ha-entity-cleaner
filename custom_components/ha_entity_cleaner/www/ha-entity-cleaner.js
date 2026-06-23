@@ -293,14 +293,20 @@ class HaEntityCleanerPanel extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    // Keep keystrokes inside our inputs from bubbling to Home Assistant's
-    // global keyboard shortcuts (otherwise typing a letter pops the quick bar).
-    this.shadowRoot.addEventListener("keydown", (e) => {
-      const t = e.composedPath()[0];
+    // Home Assistant listens for single-key shortcuts (e/c/a/d…) in the CAPTURE
+    // phase at the document level — it sees a keystroke before it reaches our
+    // input. We register a capture listener on `window` (above document) so we
+    // run first, and stop propagation for keystrokes originating in one of our
+    // fields. The character is still typed (default action isn't cancelled),
+    // but HA never opens the quick bar / Assist while you're searching.
+    this._kbGuard = (e) => {
+      const path = e.composedPath();
+      if (!path.includes(this)) return;
+      const t = path[0];
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) {
         e.stopPropagation();
       }
-    });
+    };
     this._hass = null;
     this._data = null;
     this._error = null;
@@ -376,7 +382,13 @@ class HaEntityCleanerPanel extends HTMLElement {
   }
 
   connectedCallback() {
+    // Capture-phase on window runs before HA's document-level shortcut handler.
+    window.addEventListener("keydown", this._kbGuard, true);
     this._render();
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("keydown", this._kbGuard, true);
   }
 
   // ---- data ----------------------------------------------------------------
