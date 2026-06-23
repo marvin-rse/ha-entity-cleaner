@@ -46,7 +46,7 @@ Home Assistant accumulates "zombie" entities — registry leftovers from removed
 
 <img src="assets/screenshot-home.png" alt="HA Entity Cleaner — Home view with cleanliness score and counters" width="100%"/>
 
-The home screen shows your instance's **cleanliness score** (0–100), a breakdown of entity counts by bucket, and a per-domain bar chart of orphans.
+The home screen shows your instance's **cleanliness score** (0–100), entity counters (orphans / offline / disabled / ghosts), a second row for **registry & recorder** leftovers (devices / areas / recorder), and a per-domain bar chart of orphans.
 
 ---
 
