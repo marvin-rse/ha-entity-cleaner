@@ -270,6 +270,14 @@ class HaEntityCleanerPanel extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
+    // Keep keystrokes inside our inputs from bubbling to Home Assistant's
+    // global keyboard shortcuts (otherwise typing a letter pops the quick bar).
+    this.shadowRoot.addEventListener("keydown", (e) => {
+      const t = e.composedPath()[0];
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) {
+        e.stopPropagation();
+      }
+    });
     this._hass = null;
     this._data = null;
     this._error = null;
