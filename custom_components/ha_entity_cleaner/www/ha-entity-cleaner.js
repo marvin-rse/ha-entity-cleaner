@@ -173,6 +173,17 @@ p { margin: 6px 0; }
 .progress-fill { height:100%; background:var(--c-orphan); border-radius:20px; transition:width .3s; }
 .modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
 
+/* update banner */
+.update-banner { display:flex; align-items:center; gap:10px;
+  background:color-mix(in srgb, var(--primary-color) 12%, transparent);
+  border:1px solid color-mix(in srgb, var(--primary-color) 45%, transparent);
+  border-radius:11px; padding:10px 14px; font-size:13px; margin-bottom:16px; }
+.update-link { color:var(--primary-color); text-decoration:none; font-weight:600; white-space:nowrap; }
+.update-link:hover { text-decoration:underline; }
+.update-x { margin-left:auto; background:none; border:none; color:var(--secondary-text-color);
+  font-size:18px; line-height:1; cursor:pointer; padding:0 4px; }
+.update-x:hover { color:var(--primary-text-color); }
+
 /* footer */
 .footer { margin-top:32px; padding-top:14px; border-top:1px solid var(--divider-color);
   text-align:center; font-size:12px; color:var(--secondary-text-color); }
@@ -262,6 +273,18 @@ function txt(s) { return document.createTextNode(s); }
 // entity registry — they use their own list rendering and delete WS calls.
 const EXTRA_BUCKETS = ["device", "area", "recorder"];
 
+const RELEASES_API = "https://api.github.com/repos/marvin-rse/ha-entity-cleaner/releases/latest";
+
+// Numeric "x.y.z" comparison → -1 / 0 / 1.
+function cmpVersion(a, b) {
+  const pa = String(a).split("."), pb = String(b).split(".");
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (parseInt(pa[i], 10) || 0) - (parseInt(pb[i], 10) || 0);
+    if (d !== 0) return d < 0 ? -1 : 1;
+  }
+  return 0;
+}
+
 // ---------------------------------------------------------------------------
 // Panel element
 // ---------------------------------------------------------------------------
@@ -298,6 +321,9 @@ class HaEntityCleanerPanel extends HTMLElement {
     this._extras = null;       // { devices, areas, summary }
     this._recorder = null;     // { recorder, summary }
     this._version = "";
+    this._update = null;       // { version, url } when a newer release exists
+    this._updateChecked = false;
+    this._updateDismissed = false;
   }
 
   _isExtraBucket(b) { return EXTRA_BUCKETS.includes(b ?? this._bucket); }
@@ -312,6 +338,41 @@ class HaEntityCleanerPanel extends HTMLElement {
   set panel(p) {
     const v = p?.config?.version;
     if (v && v !== this._version) { this._version = v; this._render(); }
+    if (this._version && this._version !== "0" && !this._updateChecked) {
+      this._updateChecked = true;
+      this._checkForUpdate();
+    }
+  }
+
+  // Best-effort check of the latest GitHub release. Sends no instance data;
+  // fails silently when offline or rate-limited.
+  async _checkForUpdate() {
+    try {
+      const resp = await fetch(RELEASES_API, { headers: { Accept: "application/vnd.github+json" } });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const latest = (data.tag_name || "").replace(/^v/, "");
+      if (latest && cmpVersion(latest, this._version) > 0) {
+        this._update = { version: latest, url: data.html_url || "https://github.com/marvin-rse/ha-entity-cleaner/releases" };
+        this._render();
+      }
+    } catch (e) {
+      /* offline / blocked / rate-limited — ignore */
+    }
+  }
+
+  _renderUpdateBanner() {
+    const b = el("div", { className: "update-banner" });
+    b.appendChild(el("span", {}, "⬆️"));
+    b.appendChild(el("span", {}, `Version ${this._update.version} is available — update via HACS.`));
+    b.appendChild(el("a", {
+      className: "update-link", href: this._update.url, target: "_blank", rel: "noopener",
+    }, "Release notes"));
+    b.appendChild(el("button", {
+      className: "update-x", title: "Dismiss",
+      onclick: () => { this._updateDismissed = true; this._render(); },
+    }, "×"));
+    return b;
   }
 
   connectedCallback() {
@@ -402,6 +463,10 @@ class HaEntityCleanerPanel extends HTMLElement {
 
     const page = el("div", { className: "page" });
     page.appendChild(this._renderHeader());
+
+    if (this._update && !this._updateDismissed) {
+      page.appendChild(this._renderUpdateBanner());
+    }
 
     if (this._loading) {
       page.appendChild(el("div", { className: "loading" }, "Scanning entities…"));
