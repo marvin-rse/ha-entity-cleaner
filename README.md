@@ -281,7 +281,7 @@ The panel also surfaces three other kinds of registry/database leftovers, each o
 - **Referenced entities skipped** — `skip_referenced: true` by default
 - **Two-factor confirmation** — typed `DELETE` + backup checkbox in the panel
 - **Admin-only** — panel (`require_admin: True`) and all WS commands are inaccessible to regular users
-- **Fully local** — no telemetry, no cloud, no CDN dependencies
+- **Local-first** — no telemetry, no cloud, no CDN dependencies. The panel makes one optional, best-effort call to GitHub's public releases API to show an "update available" banner; it sends no data about your instance and fails silently if blocked.
 - **Per-entity error handling** — failures are reported, never silently swallowed
 
 ---
