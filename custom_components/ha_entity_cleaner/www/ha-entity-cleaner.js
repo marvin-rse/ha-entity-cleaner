@@ -736,15 +736,10 @@ class HaEntityCleanerPanel extends HTMLElement {
     const toolbar = el("div", { className: "toolbar" });
     const searchEl = el("input", { className: "search", type: "text", placeholder: "Filter by entity_id or domain…" });
     searchEl.value = this._search;
-    searchEl.addEventListener("input", e => {
-      this._search = e.target.value;
-      const pos = e.target.selectionStart;
-      this._render();
-      // The re-render replaces the input, so refocus it and restore the caret —
-      // otherwise focus is lost and the next letter triggers HA's quick bar.
-      const ni = this.shadowRoot.querySelector(".search");
-      if (ni) { ni.focus(); try { ni.setSelectionRange(pos, pos); } catch (_) {} }
-    });
+    // Update only the list — never rebuild the search input — so it keeps
+    // focus. (A full re-render destroyed the input, dropping focus, and the
+    // next keystroke then triggered Home Assistant's global quick bar.)
+    searchEl.addEventListener("input", e => { this._search = e.target.value; this._refilterList(); });
     toolbar.appendChild(searchEl);
 
     if (this._bucket === "orphan") {
@@ -824,15 +819,10 @@ class HaEntityCleanerPanel extends HTMLElement {
       placeholder: bucket === "area" ? "Filter by area name…" : "Filter by name or id…",
     });
     searchEl.value = this._search;
-    searchEl.addEventListener("input", e => {
-      this._search = e.target.value;
-      const pos = e.target.selectionStart;
-      this._render();
-      // The re-render replaces the input, so refocus it and restore the caret —
-      // otherwise focus is lost and the next letter triggers HA's quick bar.
-      const ni = this.shadowRoot.querySelector(".search");
-      if (ni) { ni.focus(); try { ni.setSelectionRange(pos, pos); } catch (_) {} }
-    });
+    // Update only the list — never rebuild the search input — so it keeps
+    // focus. (A full re-render destroyed the input, dropping focus, and the
+    // next keystroke then triggered Home Assistant's global quick bar.)
+    searchEl.addEventListener("input", e => { this._search = e.target.value; this._refilterList(); });
     toolbar.appendChild(searchEl);
     toolbar.appendChild(el("button", {
       className: "btn btn-ghost",
@@ -997,6 +987,38 @@ class HaEntityCleanerPanel extends HTMLElement {
     }
     this._deleteStep = "done";
     this._render();
+  }
+
+  // Rebuild only the entity/extra list in place (keeps the search input alive
+  // and focused). Falls back to a full render if the list isn't on screen.
+  _refilterList() {
+    const listEl = this.shadowRoot.querySelector(".entity-list");
+    if (!listEl) { this._render(); return; }
+    while (listEl.firstChild) listEl.removeChild(listEl.firstChild);
+
+    const emptyMsg = () => el("div", { className: "empty" },
+      "Nothing in this category." + (this._search ? " Try clearing the filter." : " Your instance is clean here."));
+
+    if (this._isExtraBucket()) {
+      const bucket = this._bucket;
+      const q = this._search.trim().toLowerCase();
+      const items = this._extraItems(bucket).filter(it => {
+        if (!q) return true;
+        return `${this._extraId(bucket, it)} ${it.name || ""}`.toLowerCase().includes(q);
+      });
+      if (!items.length) listEl.appendChild(emptyMsg());
+      else for (const it of items) listEl.appendChild(this._renderExtraRow(bucket, it));
+    } else {
+      const items = this._currentItems;
+      if (!items.length) {
+        listEl.appendChild(emptyMsg());
+      } else {
+        const deletable = this._bucket !== "ghost";
+        for (const [domain, domItems] of groupByDomain(items)) {
+          listEl.appendChild(this._renderDomainGroup(domain, domItems, deletable));
+        }
+      }
+    }
   }
 
   _renderDomainGroup(domain, items, deletable) {
