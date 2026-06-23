@@ -782,7 +782,13 @@ class HaEntityCleanerPanel extends HTMLElement {
     row.appendChild(cb);
 
     if (bucket === "device") {
-      row.appendChild(el("span", { className: "eid" }, item.name || id));
+      // Clicking a device opens HA's device page (devices aren't entities).
+      const nameEl = el("span", { className: "eid eid-link", title: "Open device page" }, item.name || id);
+      nameEl.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this._navigate(`/config/devices/device/${id}`);
+      });
+      row.appendChild(nameEl);
       const meta = [item.manufacturer, item.model].filter(Boolean).join(" · ");
       if (meta) row.appendChild(el("span", { className: "reason" }, meta));
       if (item.has_config_entry) {
@@ -794,7 +800,15 @@ class HaEntityCleanerPanel extends HTMLElement {
     } else if (bucket === "area") {
       row.appendChild(el("span", { className: "eid" }, item.name || id));
     } else { // recorder
-      row.appendChild(el("span", { className: "eid" }, id));
+      // The entity is gone, but open more-info anyway (best effort).
+      const eidEl = el("span", { className: "eid eid-link", title: "Open entity details (entity may no longer exist)" }, id);
+      eidEl.addEventListener("click", (e) => {
+        e.stopPropagation();
+        eidEl.dispatchEvent(new CustomEvent("hass-more-info", {
+          detail: { entityId: id }, bubbles: true, composed: true,
+        }));
+      });
+      row.appendChild(eidEl);
       const tags = [];
       if (item.unit) tags.push(item.unit);
       if (item.has_mean) tags.push("mean");
@@ -802,6 +816,12 @@ class HaEntityCleanerPanel extends HTMLElement {
       if (tags.length) row.appendChild(el("span", { className: "reason" }, tags.join(" · ")));
     }
     return row;
+  }
+
+  // Client-side navigation to another HA page (e.g. a device's config page).
+  _navigate(path) {
+    history.pushState(null, "", path);
+    this.dispatchEvent(new CustomEvent("location-changed", { bubbles: true, composed: true }));
   }
 
   _renderExtrasModal() {
