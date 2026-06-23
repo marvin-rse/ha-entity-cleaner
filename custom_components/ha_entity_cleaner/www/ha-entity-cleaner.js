@@ -736,7 +736,15 @@ class HaEntityCleanerPanel extends HTMLElement {
     const toolbar = el("div", { className: "toolbar" });
     const searchEl = el("input", { className: "search", type: "text", placeholder: "Filter by entity_id or domain…" });
     searchEl.value = this._search;
-    searchEl.addEventListener("input", e => { this._search = e.target.value; this._render(); });
+    searchEl.addEventListener("input", e => {
+      this._search = e.target.value;
+      const pos = e.target.selectionStart;
+      this._render();
+      // The re-render replaces the input, so refocus it and restore the caret —
+      // otherwise focus is lost and the next letter triggers HA's quick bar.
+      const ni = this.shadowRoot.querySelector(".search");
+      if (ni) { ni.focus(); try { ni.setSelectionRange(pos, pos); } catch (_) {} }
+    });
     toolbar.appendChild(searchEl);
 
     if (this._bucket === "orphan") {
@@ -816,7 +824,15 @@ class HaEntityCleanerPanel extends HTMLElement {
       placeholder: bucket === "area" ? "Filter by area name…" : "Filter by name or id…",
     });
     searchEl.value = this._search;
-    searchEl.addEventListener("input", e => { this._search = e.target.value; this._render(); });
+    searchEl.addEventListener("input", e => {
+      this._search = e.target.value;
+      const pos = e.target.selectionStart;
+      this._render();
+      // The re-render replaces the input, so refocus it and restore the caret —
+      // otherwise focus is lost and the next letter triggers HA's quick bar.
+      const ni = this.shadowRoot.querySelector(".search");
+      if (ni) { ni.focus(); try { ni.setSelectionRange(pos, pos); } catch (_) {} }
+    });
     toolbar.appendChild(searchEl);
     toolbar.appendChild(el("button", {
       className: "btn btn-ghost",
